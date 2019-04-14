@@ -80,8 +80,6 @@ namespace ALE_ShipFixer {
 
                     IMyCubeGrid grid = groupNodes.NodeData;
 
-                    Log.Warn("Test " + grid.CustomName);
-
                     List<IMyTerminalBlock> tBlockList = new List<IMyTerminalBlock>();
 
                     var gts = MyAPIGateway.TerminalActionsHelper.GetTerminalSystemForGrid(grid);
@@ -133,6 +131,8 @@ namespace ALE_ShipFixer {
                         objectBuilderList.Add(ob);
 
                         var entity = grid as IMyEntity;
+
+                        Log.Warn("Grid " + grid.CustomName+" was removed for later paste");
 
                         MyAPIGateway.Utilities.InvokeOnGameThread(() => entity.Delete());
                         entity.Close();
