@@ -26,68 +26,6 @@ namespace ALE_ShipFixer {
 
         public ShipFixerPlugin Plugin => (ShipFixerPlugin) Context.Plugin;
 
-        [Command("stopshipmod", "Stops the Ship with a given name.")]
-        [Permission(MyPromoteLevel.Moderator)]
-        public void StopShipMod(string gridName) {
-
-            IMyPlayer player = Context.Player;
-
-            long playerId = 0L;
-
-            if (player == null)
-                return;
-            else
-                playerId = player.IdentityId;
-
-            stopShip(gridName, 0, playerId);
-        }
-
-        [Command("stopship", "Stops the Ship with a given name.")]
-        [Permission(MyPromoteLevel.None)]
-        public void StopShipPlayer(string gridname) {
-
-            IMyPlayer player = Context.Player;
-
-            long playerId = 0L;
-
-            if (player == null)
-                return;
-            else
-                playerId = player.IdentityId;
-
-            stopShip(gridname, playerId, playerId);
-        }
-
-        private void stopShip(string gridName, long playerId, long executingPlayerId) {
-
-            ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups = findGridGroupsForPlayer(gridName, playerId);
-
-            /* No group or too many groups found */
-            if (groups.Count < 1) {
-                MyVisualScriptLogicProvider.SendChatMessage("Could not find your Grid.", "Server", executingPlayerId, "Red");
-                return;
-            }
-
-            /* too many groups found */
-            if (groups.Count > 1) {
-                MyVisualScriptLogicProvider.SendChatMessage("Found multiple Grids with same Name. Rename your grid first to something unique.", "Server", executingPlayerId, "Red");
-                return;
-            }
-
-            foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group in groups) {
-
-                List<MyObjectBuilder_EntityBase> objectBuilderList = new List<MyObjectBuilder_EntityBase>();
-
-                foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
-
-                    IMyCubeGrid grid = groupNodes.NodeData;
-
-                    grid.Physics.LinearVelocity = Vector3.Zero;
-                    grid.Physics.AngularVelocity = Vector3.Zero;
-                }
-            }
-        }
-
         [Command("fixshipmod", "Cuts and pastes a ship with the given name to try to fix various bugs.")]
         [Permission(MyPromoteLevel.Moderator)]
         public void FixShipMod(string gridName) {
