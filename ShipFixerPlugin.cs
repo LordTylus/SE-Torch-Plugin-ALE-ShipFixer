@@ -17,6 +17,8 @@ using Torch.API;
 using VRage.Game.ModAPI;
 using System.Collections.Generic;
 using Torch.Commands;
+using System.IO;
+using System;
 
 namespace ALE_ShipFixer {
 
@@ -27,16 +29,38 @@ namespace ALE_ShipFixer {
         private Dictionary<long, CurrentCooldown> _currentCooldownMap = new Dictionary<long, CurrentCooldown>();
         private Dictionary<long, CurrentCooldown> _confirmations = new Dictionary<long, CurrentCooldown>();
 
+        private Persistent<ShipFixerConfig> _config;
+        public ShipFixerConfig Config => _config?.Data;
+
         public Dictionary<long, CurrentCooldown> CurrentCooldownMap { get{ return _currentCooldownMap; } }
 
         public Dictionary<long, CurrentCooldown> ConfirmationsMap { get { return _confirmations; } }
 
-        public long Cooldown { get { return 15 * 60 * 1000; } }
-        public long CooldownConfirmation { get { return 30 * 1000; } }
+        public long Cooldown { get { return Config.CooldownInSeconds * 1000; } }
+        public long CooldownConfirmationSeconds { get { return Config.ConfirmationInSeconds; } }
+        public long CooldownConfirmation { get { return Config.ConfirmationInSeconds * 1000; } }
 
         /// <inheritdoc />
         public override void Init(ITorchBase torch) {
             base.Init(torch);
+
+            var configFile = Path.Combine(StoragePath, "ShipFixer.cfg");
+
+            try {
+
+                _config = Persistent<ShipFixerConfig>.Load(configFile);
+
+            } catch (Exception e) {
+                Log.Warn(e);
+            }
+
+            if (_config?.Data == null) {
+
+                Log.Info("Create Default Config, because none was found!");
+
+                _config = new Persistent<ShipFixerConfig>(configFile, new ShipFixerConfig());
+                _config.Save();
+            }
         }
 
         public void fixShip(string gridName, long playerId, CommandContext Context) {

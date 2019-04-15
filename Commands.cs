@@ -94,7 +94,7 @@ namespace ALE_ShipFixer {
                 long remainingSeconds = confirmationCooldown.getRemainingSeconds(gridName);
 
                 if (remainingSeconds == 0) {
-                    Context.Respond("It is recommended to take a Blueprint of the ship first (ctrl+b). Repeat command within 30 seconds.");
+                    Context.Respond("It is recommended to take a Blueprint of the ship first (ctrl+b). Repeat command within "+Plugin.CooldownConfirmationSeconds+" seconds.");
                     confirmationCooldown.startCooldown(gridName);
                     return false;
                 }
@@ -104,7 +104,7 @@ namespace ALE_ShipFixer {
                 confirmationCooldown = new CurrentCooldown(Plugin.CooldownConfirmation);
                 confirmationCooldownMap.Add(playerId, confirmationCooldown);
 
-                Context.Respond("It is recommended to take a Blueprint of the ship first (ctrl+b). Repeat command within 30 seconds.");
+                Context.Respond("It is recommended to take a Blueprint of the ship first (ctrl+b). Repeat command within " + Plugin.CooldownConfirmationSeconds + " seconds.");
 
                 confirmationCooldown.startCooldown(gridName);
                 return false;
