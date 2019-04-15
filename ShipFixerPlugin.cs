@@ -1,5 +1,4 @@
 ﻿using NLog;
-using Sandbox.Game;
 using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
 using Sandbox.ModAPI.Ingame;
@@ -17,6 +16,7 @@ using Torch;
 using Torch.API;
 using VRage.Game.ModAPI;
 using System.Collections.Generic;
+using Torch.Commands;
 
 namespace ALE_ShipFixer {
 
@@ -25,6 +25,7 @@ namespace ALE_ShipFixer {
         public static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
         private Dictionary<long, CurrentCooldown> _currentCooldownMap = new Dictionary<long, CurrentCooldown>();
+        private Dictionary<long, CurrentCooldown> _confirmations = new Dictionary<long, CurrentCooldown>();
 
         public Dictionary<long, CurrentCooldown> CurrentCooldownMap { get{ return _currentCooldownMap; } }
 
@@ -33,19 +34,19 @@ namespace ALE_ShipFixer {
             base.Init(torch);
         }
 
-        public void fixShip(string gridName, long playerId, long executingPlayerId) {
+        public void fixShip(string gridName, long playerId, CommandContext Context) {
 
             ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups = findGridGroupsForPlayer(gridName, playerId);
 
             /* No group or too many groups found */
             if (groups.Count < 1) {
-                MyVisualScriptLogicProvider.SendChatMessage("Could not find your Grid.", "Server", executingPlayerId, "Red");
+                Context.Respond("Could not find your Grid.");
                 return;
             }
 
             /* too many groups found */
             if (groups.Count > 1) {
-                MyVisualScriptLogicProvider.SendChatMessage("Found multiple Grids with same Name. Rename your grid first to something unique.", "Server", executingPlayerId, "Red");
+                Context.Respond("Found multiple Grids with same Name. Rename your grid first to something unique.");
                 return;
             }
 
@@ -68,21 +69,21 @@ namespace ALE_ShipFixer {
                         IMyLandingGear landingGear = block as IMyLandingGear;
 
                         if (landingGear != null && landingGear.IsLocked) {
-                            MyVisualScriptLogicProvider.SendChatMessage("Some Landing-Gears are still Locked. Please unlock first!", "Server", executingPlayerId, "Red");
+                            Context.Respond("Some Landing-Gears are still Locked. Please unlock first!");
                             return;
                         }
 
                         IMyShipConnector connector = block as IMyShipConnector;
 
                         if (connector != null && connector.Status == MyShipConnectorStatus.Connected) {
-                            MyVisualScriptLogicProvider.SendChatMessage("Some Connectors are still Locked. Please unlock first!", "Server", executingPlayerId, "Red");
+                            Context.Respond("Some Connectors are still Locked. Please unlock first!");
                             return;
                         }
 
                         IMyShipController controller = block as IMyShipController;
 
                         if (controller != null && controller.IsUnderControl) {
-                            MyVisualScriptLogicProvider.SendChatMessage("Cockpits or Seats are still occupied. Clear them first! Dont forget to check the toilet!", "Server", executingPlayerId, "Red");
+                            Context.Respond("Cockpits or Seats are still occupied. Clear them first! Dont forget to check the toilet!");
                             return;
                         }
                     }

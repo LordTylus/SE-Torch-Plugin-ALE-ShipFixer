@@ -1,7 +1,5 @@
 ﻿using NLog;
-using Sandbox.Game;
 using System;
-using System.Collections.Generic;
 using Torch.Commands;
 using Torch.Commands.Permissions;
 using VRage.Game.ModAPI;
@@ -17,18 +15,9 @@ namespace ALE_ShipFixer {
         [Permission(MyPromoteLevel.Moderator)]
         public void FixShipMod(string gridName) {
 
-            IMyPlayer player = Context.Player;
-
-            long playerId = 0L;
-
-            if (player == null)
-                return;
-            else
-                playerId = player.IdentityId;
-
             try {
 
-                Plugin.fixShip(gridName, 0, playerId);
+                Plugin.fixShip(gridName, 0, Context);
 
             } catch (Exception e) {
                 Log.Error("Error on fixing ship", e);
@@ -43,25 +32,26 @@ namespace ALE_ShipFixer {
 
             long playerId = 0L;
 
-            if (player == null)
+            if (player == null) {
+
+                Context.Respond("Console has no Grids so cannot use this command. Use !fixshipmod instead!");
                 return;
-            else
+
+            } else {
                 playerId = player.IdentityId;
+            }
 
             var currentCooldownMap = Plugin.CurrentCooldownMap;
 
             CurrentCooldown currentCooldown = null;
 
-            Log.Warn(currentCooldownMap.Count);
-
             if(currentCooldownMap.TryGetValue(playerId, out currentCooldown)) {
 
                 long remainingSeconds = currentCooldown.getRemainingSeconds();
 
-                Log.Warn(remainingSeconds + "");
-
                 if (remainingSeconds > 0) {
-                    MyVisualScriptLogicProvider.SendChatMessage("Command is still on cooldown for "+ remainingSeconds + " seconds.", "Server", playerId, "Red");
+                    Log.Info("Cooldown for Player " + player + " still running! "+ remainingSeconds + " seconds remaining!");
+                    Context.Respond("Command is still on cooldown for "+ remainingSeconds + " seconds.");
                     return;
                 }
 
@@ -69,13 +59,11 @@ namespace ALE_ShipFixer {
 
                 currentCooldown = new CurrentCooldown(playerId);
                 currentCooldownMap.Add(playerId, currentCooldown);
-
-                Log.Warn("added");
             }
 
             try { 
 
-                Plugin.fixShip(gridName, playerId, playerId);
+                Plugin.fixShip(gridName, playerId, Context);
 
             } catch (Exception e) {
                 Log.Error("Error on fixing ship", e);
