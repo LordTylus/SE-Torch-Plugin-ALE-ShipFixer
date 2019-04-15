@@ -15,6 +15,14 @@ namespace ALE_ShipFixer {
         [Permission(MyPromoteLevel.Moderator)]
         public void FixShipMod(string gridName) {
 
+            long playerId = 0L;
+
+            if (Context.Player != null) 
+                playerId = Context.Player.IdentityId;
+
+            if (!checkConformation(playerId, gridName))
+                return;
+
             try {
 
                 Plugin.fixShip(gridName, 0, Context);
@@ -47,7 +55,7 @@ namespace ALE_ShipFixer {
 
             if(currentCooldownMap.TryGetValue(playerId, out currentCooldown)) {
 
-                long remainingSeconds = currentCooldown.getRemainingSeconds();
+                long remainingSeconds = currentCooldown.getRemainingSeconds(null);
 
                 if (remainingSeconds > 0) {
                     Log.Info("Cooldown for Player " + player.DisplayName + " still running! "+ remainingSeconds + " seconds remaining!");
@@ -57,9 +65,12 @@ namespace ALE_ShipFixer {
 
             } else {
 
-                currentCooldown = new CurrentCooldown(playerId);
+                currentCooldown = new CurrentCooldown(Plugin.Cooldown);
                 currentCooldownMap.Add(playerId, currentCooldown);
             }
+
+            if (!checkConformation(playerId, gridName))
+                return;
 
             try { 
 
@@ -70,7 +81,37 @@ namespace ALE_ShipFixer {
             }
 
             Log.Info("Cooldown for Player "+player+" started!");
-            currentCooldown.startCooldown();
+            currentCooldown.startCooldown(null);
+        }
+
+        private bool checkConformation(long playerId, string gridName) {
+
+            var confirmationCooldownMap = Plugin.ConfirmationsMap;
+            CurrentCooldown confirmationCooldown = null;
+
+            if (confirmationCooldownMap.TryGetValue(playerId, out confirmationCooldown)) {
+
+                long remainingSeconds = confirmationCooldown.getRemainingSeconds(gridName);
+
+                if (remainingSeconds == 0) {
+                    Context.Respond("It is recommended to take a Blueprint of the ship first (ctrl+b). Repeat command within 30 seconds.");
+                    confirmationCooldown.startCooldown(gridName);
+                    return false;
+                }
+
+            } else {
+
+                confirmationCooldown = new CurrentCooldown(Plugin.CooldownConfirmation);
+                confirmationCooldownMap.Add(playerId, confirmationCooldown);
+
+                Context.Respond("It is recommended to take a Blueprint of the ship first (ctrl+b). Repeat command within 30 seconds.");
+
+                confirmationCooldown.startCooldown(gridName);
+                return false;
+            }
+
+            confirmationCooldownMap.Remove(playerId);
+            return true;
         }
     }
 }

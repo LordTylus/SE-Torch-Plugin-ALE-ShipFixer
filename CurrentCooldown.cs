@@ -8,23 +8,24 @@ using System.Threading.Tasks;
 namespace ALE_ShipFixer {
     public class CurrentCooldown {
 
-        private static readonly long COOLDOWN = 15 * 60 * 1000;
-
-        private long _playerId;
         private long _startTime;
         private long _currentCooldown;
 
-        public CurrentCooldown(long playerID) {
-            this._playerId = playerID;
+        private String command;
+
+        public CurrentCooldown(long cooldown) {
+            this._currentCooldown = cooldown;
         }
 
-        public void startCooldown() {
-
+        public void startCooldown(String command) {
+            this.command = command;
             this._startTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            this._currentCooldown = COOLDOWN;
         }
 
-        public long getRemainingSeconds() {
+        public long getRemainingSeconds(String command) {
+
+            if (this.command != command)
+                return 0;
 
             long elapsedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - _startTime;
 

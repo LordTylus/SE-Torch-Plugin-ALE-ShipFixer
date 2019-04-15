@@ -29,6 +29,11 @@ namespace ALE_ShipFixer {
 
         public Dictionary<long, CurrentCooldown> CurrentCooldownMap { get{ return _currentCooldownMap; } }
 
+        public Dictionary<long, CurrentCooldown> ConfirmationsMap { get { return _confirmations; } }
+
+        public long Cooldown { get { return 15 * 60 * 1000; } }
+        public long CooldownConfirmation { get { return 30 * 1000; } }
+
         /// <inheritdoc />
         public override void Init(ITorchBase torch) {
             base.Init(torch);
@@ -50,89 +55,95 @@ namespace ALE_ShipFixer {
                 return;
             }
 
-            foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group in groups) {
+            MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group = null;
 
-                foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
+            if (!groups.TryPeek(out group)) {
+                Context.Respond("Could not find your Grid.");
+                return;
+            }
 
-                    IMyCubeGrid grid = groupNodes.NodeData;
+            fixGroup(group, Context);
+        }
 
-                    List<IMyTerminalBlock> tBlockList = new List<IMyTerminalBlock>();
+        private void fixGroup(MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group, CommandContext Context) {
 
-                    var gts = MyAPIGateway.TerminalActionsHelper.GetTerminalSystemForGrid(grid);
-                    gts.GetBlocksOfType<Sandbox.ModAPI.IMyTerminalBlock>(tBlockList);
+            foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
 
-                    foreach (var block in tBlockList) {
+                IMyCubeGrid grid = groupNodes.NodeData;
 
-                        if (block == null)
-                            continue;
+                List<IMyTerminalBlock> tBlockList = new List<IMyTerminalBlock>();
 
-                        IMyLandingGear landingGear = block as IMyLandingGear;
+                var gts = MyAPIGateway.TerminalActionsHelper.GetTerminalSystemForGrid(grid);
+                gts.GetBlocksOfType<Sandbox.ModAPI.IMyTerminalBlock>(tBlockList);
 
-                        if (landingGear != null && landingGear.IsLocked) {
-                            Context.Respond("Some Landing-Gears are still Locked. Please unlock first!");
-                            return;
-                        }
+                foreach (var block in tBlockList) {
 
-                        IMyShipConnector connector = block as IMyShipConnector;
+                    if (block == null)
+                        continue;
 
-                        if (connector != null && connector.Status == MyShipConnectorStatus.Connected) {
-                            Context.Respond("Some Connectors are still Locked. Please unlock first!");
-                            return;
-                        }
+                    IMyLandingGear landingGear = block as IMyLandingGear;
 
-                        IMyShipController controller = block as IMyShipController;
+                    if (landingGear != null && landingGear.IsLocked) {
+                        Context.Respond("Some Landing-Gears are still Locked. Please unlock first!");
+                        return;
+                    }
 
-                        if (controller != null && controller.IsUnderControl) {
-                            Context.Respond("Cockpits or Seats are still occupied. Clear them first! Dont forget to check the toilet!");
-                            return;
-                        }
+                    IMyShipConnector connector = block as IMyShipConnector;
+
+                    if (connector != null && connector.Status == MyShipConnectorStatus.Connected) {
+                        Context.Respond("Some Connectors are still Locked. Please unlock first!");
+                        return;
+                    }
+
+                    IMyShipController controller = block as IMyShipController;
+
+                    if (controller != null && controller.IsUnderControl) {
+                        Context.Respond("Cockpits or Seats are still occupied. Clear them first! Dont forget to check the toilet!");
+                        return;
                     }
                 }
             }
 
-            foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group in groups) {
+            List<MyObjectBuilder_EntityBase> objectBuilderList = new List<MyObjectBuilder_EntityBase>();
 
-                List<MyObjectBuilder_EntityBase> objectBuilderList = new List<MyObjectBuilder_EntityBase>();
+            foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
 
-                foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
+                IMyCubeGrid grid = groupNodes.NodeData;
 
-                    IMyCubeGrid grid = groupNodes.NodeData;
+                grid.Physics.LinearVelocity = Vector3.Zero;
 
-                    grid.Physics.LinearVelocity = Vector3.Zero;
+                MyObjectBuilder_EntityBase ob = (MyObjectBuilder_EntityBase)grid.GetObjectBuilder();
 
-                    MyObjectBuilder_EntityBase ob = (MyObjectBuilder_EntityBase)grid.GetObjectBuilder();
+                if (!objectBuilderList.Contains(ob)) {
 
-                    if (!objectBuilderList.Contains(ob)) {
+                    objectBuilderList.Add(ob);
 
-                        objectBuilderList.Add(ob);
+                    var entity = grid as IMyEntity;
 
-                        var entity = grid as IMyEntity;
+                    Log.Warn("Grid " + grid.CustomName + " was removed for later paste");
 
-                        Log.Warn("Grid " + grid.CustomName + " was removed for later paste");
-
-                        MyAPIGateway.Utilities.InvokeOnGameThread(() => entity.Delete());
-                        entity.Close();
-                        continue;
-                    }
+                    MyAPIGateway.Utilities.InvokeOnGameThread(() => entity.Delete());
+                    entity.Close();
+                    continue;
                 }
-
-                MyAPIGateway.Entities.RemapObjectBuilderCollection(objectBuilderList);
-                var ents = new List<IMyEntity>();
-
-                foreach (var ob in objectBuilderList) {
-
-                    if (ob == null)
-                        continue;
-
-                    var ent = MyAPIGateway.Entities.CreateFromObjectBuilder(ob);
-                    ents.Add(ent);
-                }
-
-                MyAPIGateway.Multiplayer.SendEntitiesCreated(objectBuilderList);
-
-                foreach (var ent in ents)
-                    MyAPIGateway.Entities.AddEntity(ent, true);
             }
+
+            MyAPIGateway.Entities.RemapObjectBuilderCollection(objectBuilderList);
+            var ents = new List<IMyEntity>();
+
+            foreach (var ob in objectBuilderList) {
+
+                if (ob == null)
+                    continue;
+
+                var ent = MyAPIGateway.Entities.CreateFromObjectBuilder(ob);
+                ents.Add(ent);
+            }
+
+            MyAPIGateway.Multiplayer.SendEntitiesCreated(objectBuilderList);
+
+            foreach (var ent in ents)
+                MyAPIGateway.Entities.AddEntity(ent, true);
         }
 
         private ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> findGridGroupsForPlayer(string gridName, long playerId) {
