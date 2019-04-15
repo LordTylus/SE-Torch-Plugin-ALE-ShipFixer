@@ -50,7 +50,7 @@ namespace ALE_ShipFixer {
                 long remainingSeconds = currentCooldown.getRemainingSeconds();
 
                 if (remainingSeconds > 0) {
-                    Log.Info("Cooldown for Player " + player + " still running! "+ remainingSeconds + " seconds remaining!");
+                    Log.Info("Cooldown for Player " + player.DisplayName + " still running! "+ remainingSeconds + " seconds remaining!");
                     Context.Respond("Command is still on cooldown for "+ remainingSeconds + " seconds.");
                     return;
                 }
