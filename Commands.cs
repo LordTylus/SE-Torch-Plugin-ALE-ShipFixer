@@ -1,23 +1,10 @@
 ﻿using NLog;
 using Sandbox.Game;
-using Sandbox.Game.Entities;
-using Sandbox.ModAPI;
-using Sandbox.ModAPI.Ingame;
-using SpaceEngineers.Game.ModAPI;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Torch.Commands;
 using Torch.Commands.Permissions;
 using VRage.Game.ModAPI;
-using VRage.Groups;
-using VRage.ModAPI;
-using VRage.ObjectBuilders;
-using VRageMath;
-using IMyShipConnector = Sandbox.ModAPI.Ingame.IMyShipConnector;
-using IMyShipController = Sandbox.ModAPI.IMyShipController;
-using IMyTerminalBlock = Sandbox.ModAPI.Ingame.IMyTerminalBlock;
 
 namespace ALE_ShipFixer {
     public class Commands : CommandModule {
@@ -39,7 +26,13 @@ namespace ALE_ShipFixer {
             else
                 playerId = player.IdentityId;
 
-            fixShip(gridName, 0, playerId);
+            try {
+
+                Plugin.fixShip(gridName, 0, playerId);
+
+            } catch (Exception e) {
+                Log.Error("Error on fixing ship", e);
+            }
         }
 
         [Command("fixship", "Cuts and pastes a ship with the given name to try to fix various bugs.")]
@@ -55,133 +48,41 @@ namespace ALE_ShipFixer {
             else
                 playerId = player.IdentityId;
 
-            fixShip(gridName, playerId, playerId);
-        }
+            var currentCooldownMap = Plugin.CurrentCooldownMap;
 
-        private void fixShip(string gridName, long playerId, long executingPlayerId) {
+            CurrentCooldown currentCooldown = null;
 
-            ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups = findGridGroupsForPlayer(gridName, playerId);
+            Log.Warn(currentCooldownMap.Count);
 
-            /* No group or too many groups found */
-            if (groups.Count < 1) {
-                MyVisualScriptLogicProvider.SendChatMessage("Could not find your Grid.", "Server", executingPlayerId, "Red");
-                return;
-            }
+            if(currentCooldownMap.TryGetValue(playerId, out currentCooldown)) {
 
-            /* too many groups found */
-            if (groups.Count > 1) {
-                MyVisualScriptLogicProvider.SendChatMessage("Found multiple Grids with same Name. Rename your grid first to something unique.", "Server", executingPlayerId, "Red");
-                return;
-            }
+                long remainingSeconds = currentCooldown.getRemainingSeconds();
 
-            foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group in groups) {
+                Log.Warn(remainingSeconds + "");
 
-                foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
-
-                    IMyCubeGrid grid = groupNodes.NodeData;
-
-                    List<IMyTerminalBlock> tBlockList = new List<IMyTerminalBlock>();
-
-                    var gts = MyAPIGateway.TerminalActionsHelper.GetTerminalSystemForGrid(grid);
-                    gts.GetBlocksOfType<Sandbox.ModAPI.IMyTerminalBlock>(tBlockList);
-
-                    foreach (var block in tBlockList) {
-
-                        if (block == null)
-                            continue;
-
-                        IMyLandingGear landingGear = block as IMyLandingGear;
-
-                        if (landingGear != null && landingGear.IsLocked) {
-                            MyVisualScriptLogicProvider.SendChatMessage("Some Landing-Gears are still Locked. Please unlock first!", "Server", executingPlayerId, "Red");
-                            return;
-                        }
-
-                        IMyShipConnector connector = block as IMyShipConnector;
-
-                        if (connector != null && connector.Status == MyShipConnectorStatus.Connected) {
-                            MyVisualScriptLogicProvider.SendChatMessage("Some Connectors are still Locked. Please unlock first!", "Server", executingPlayerId, "Red");
-                            return;
-                        }
-
-                        IMyShipController controller = block as IMyShipController;
-
-                        if (controller != null && controller.IsUnderControl) {
-                            MyVisualScriptLogicProvider.SendChatMessage("Cockpits or Seats are still occupied. Clear them first! Dont forget to check the toilet!", "Server", executingPlayerId, "Red");
-                            return;
-                        }
-                    }
-                }
-            }
-
-            foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group in groups) {
-
-                List<MyObjectBuilder_EntityBase> objectBuilderList = new List<MyObjectBuilder_EntityBase>();
-
-                foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
-
-                    IMyCubeGrid grid = groupNodes.NodeData;
-
-                    grid.Physics.LinearVelocity = Vector3.Zero;
-
-                    MyObjectBuilder_EntityBase ob = (MyObjectBuilder_EntityBase)grid.GetObjectBuilder();
-
-                    if (!objectBuilderList.Contains(ob)) {
-
-                        objectBuilderList.Add(ob);
-
-                        var entity = grid as IMyEntity;
-
-                        Log.Warn("Grid " + grid.CustomName+" was removed for later paste");
-
-                        MyAPIGateway.Utilities.InvokeOnGameThread(() => entity.Delete());
-                        entity.Close();
-                        continue;
-                    }
+                if (remainingSeconds > 0) {
+                    MyVisualScriptLogicProvider.SendChatMessage("Command is still on cooldown for "+ remainingSeconds + " seconds.", "Server", playerId, "Red");
+                    return;
                 }
 
-                MyAPIGateway.Entities.RemapObjectBuilderCollection(objectBuilderList);
-                var ents = new List<IMyEntity>();
+            } else {
 
-                foreach (var ob in objectBuilderList) {
+                currentCooldown = new CurrentCooldown(playerId);
+                currentCooldownMap.Add(playerId, currentCooldown);
 
-                    if (ob == null)
-                        continue;
-
-                    var ent = MyAPIGateway.Entities.CreateFromObjectBuilder(ob);
-                    ents.Add(ent);
-                }
-
-                MyAPIGateway.Multiplayer.SendEntitiesCreated(objectBuilderList);
-
-                foreach (var ent in ents)
-                    MyAPIGateway.Entities.AddEntity(ent, true);
+                Log.Warn("added");
             }
-        }
 
-        private ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> findGridGroupsForPlayer(string gridName, long playerId) {
+            try { 
 
-            ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups = new ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group>();
-            Parallel.ForEach(MyCubeGridGroups.Static.Physical.Groups, group => {
+                Plugin.fixShip(gridName, playerId, playerId);
 
-                foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
+            } catch (Exception e) {
+                Log.Error("Error on fixing ship", e);
+            }
 
-                    IMyCubeGrid grid = groupNodes.NodeData;
-
-                    /* Gridname is wrong ignore */
-                    if (!grid.CustomName.Equals(gridName))
-                        continue;
-
-                    /* We are not the server and playerId is not owner */
-                    if (playerId != 0 && !grid.BigOwners.Contains(playerId))
-                        continue;
-
-                    groups.Add(group);
-                }
-            });
-
-            return groups;
+            Log.Info("Cooldown for Player "+player+" started!");
+            currentCooldown.startCooldown();
         }
     }
-
 }
