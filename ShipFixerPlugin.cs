@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using Torch.Commands;
 using System.IO;
 using System;
+using System.Linq;
 
 namespace ALE_ShipFixer {
 
@@ -63,33 +64,45 @@ namespace ALE_ShipFixer {
             }
         }
 
-        public void fixShip(string gridName, long playerId, CommandContext Context) {
+        public bool fixShip(IMyCharacter character, long playerId, CommandContext Context) {
+
+            ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups = FindLookAtGridGroup(character, playerId);
+
+            return fixGroups(groups, Context);
+        }
+
+        public bool fixShip(string gridName, long playerId, CommandContext Context) {
 
             ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups = findGridGroupsForPlayer(gridName, playerId);
+
+            return fixGroups(groups, Context);
+        }
+
+        private bool fixGroups(ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups, CommandContext Context) {
 
             /* No group or too many groups found */
             if (groups.Count < 1) {
                 Context.Respond("Could not find your Grid.");
-                return;
+                return false;
             }
 
             /* too many groups found */
             if (groups.Count > 1) {
                 Context.Respond("Found multiple Grids with same Name. Rename your grid first to something unique.");
-                return;
+                return false;
             }
 
             MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group = null;
 
             if (!groups.TryPeek(out group)) {
                 Context.Respond("Could not find your Grid.");
-                return;
+                return false;
             }
 
-            fixGroup(group, Context);
+            return fixGroup(group, Context);
         }
 
-        private void fixGroup(MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group, CommandContext Context) {
+        private bool fixGroup(MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group, CommandContext Context) {
 
             foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
 
@@ -109,21 +122,21 @@ namespace ALE_ShipFixer {
 
                     if (landingGear != null && landingGear.IsLocked) {
                         Context.Respond("Some Landing-Gears are still Locked. Please unlock first!");
-                        return;
+                        return false;
                     }
 
                     IMyShipConnector connector = block as IMyShipConnector;
 
                     if (connector != null && connector.Status == MyShipConnectorStatus.Connected) {
                         Context.Respond("Some Connectors are still Locked. Please unlock first!");
-                        return;
+                        return false;
                     }
 
                     IMyShipController controller = block as IMyShipController;
 
                     if (controller != null && controller.IsUnderControl) {
                         Context.Respond("Cockpits or Seats are still occupied. Clear them first! Dont forget to check the toilet!");
-                        return;
+                        return false;
                     }
                 }
             }
@@ -168,6 +181,80 @@ namespace ALE_ShipFixer {
 
             foreach (var ent in ents)
                 MyAPIGateway.Entities.AddEntity(ent, true);
+
+            return true;
+        }
+
+        private ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> FindLookAtGridGroup(IMyCharacter controlledEntity, long playerId) {
+
+            const float range = 5000;
+            Matrix worldMatrix;
+            Vector3D startPosition;
+            Vector3D endPosition;
+
+            worldMatrix = controlledEntity.GetHeadMatrix(true, true, false); // dead center of player cross hairs, or the direction the player is looking with ALT.
+            startPosition = worldMatrix.Translation + worldMatrix.Forward * 0.5f;
+            endPosition = worldMatrix.Translation + worldMatrix.Forward * (range + 0.5f);
+
+            var entites = new HashSet<IMyEntity>();
+            MyAPIGateway.Entities.GetEntities(entites, e => e != null);
+
+            var list = new Dictionary<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group, double>();
+            var ray = new RayD(startPosition, worldMatrix.Forward);
+
+            foreach(var group in MyCubeGridGroups.Static.Physical.Groups) {
+
+                foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
+
+                    IMyCubeGrid cubeGrid = groupNodes.NodeData;
+
+                    if (cubeGrid != null) {
+
+                        if (cubeGrid.Physics == null)
+                            continue;
+
+                        /* We are not the server and playerId is not owner */
+                        if (playerId != 0 && !cubeGrid.BigOwners.Contains(playerId))
+                            continue;
+
+                        // check if the ray comes anywhere near the Grid before continuing.    
+                        if (ray.Intersects(cubeGrid.WorldAABB).HasValue) {
+
+                            Vector3I? hit = cubeGrid.RayCastBlocks(startPosition, endPosition);
+
+                            if (hit.HasValue) {
+
+                                double distance = (startPosition - cubeGrid.GridIntegerToWorld(hit.Value)).Length();
+
+                                double oldDistance;
+
+                                if (list.TryGetValue(group, out oldDistance)) {
+
+                                    if (distance < oldDistance) {
+                                        list.Remove(group);
+                                        list.Add(group, distance);
+                                    }
+
+                                } else {
+
+                                    list.Add(group, distance);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> bag = new ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group>();
+
+            if (list.Count == 0) 
+                return bag;
+
+            // find the closest Entity.
+            var item = list.OrderBy(f => f.Value).First();
+            bag.Add(item.Key);
+
+            return bag;
         }
 
         private ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> findGridGroupsForPlayer(string gridName, long playerId) {
