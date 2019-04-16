@@ -139,13 +139,6 @@ namespace ALE_ShipFixer {
                         return false;
                     }
 
-                    IMyShipConnector connector = block as IMyShipConnector;
-
-                    if (connector != null && connector.Status == MyShipConnectorStatus.Connected) {
-                        Context.Respond("Some Connectors are still Locked. Please unlock first!");
-                        return false;
-                    }
-
                     IMyShipController controller = block as IMyShipController;
 
                     if (controller != null && controller.IsUnderControl) {
