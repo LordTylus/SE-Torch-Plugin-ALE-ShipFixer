@@ -68,17 +68,18 @@ namespace ALE_ShipFixer {
 
             ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups = FindLookAtGridGroup(character, playerId);
 
-            return fixGroups(groups, Context);
+            return fixGroups(groups, Context, playerId);
         }
 
         public bool fixShip(string gridName, long playerId, CommandContext Context) {
 
             ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups = findGridGroupsForPlayer(gridName, playerId);
 
-            return fixGroups(groups, Context);
+            return fixGroups(groups, Context, playerId);
         }
 
-        public static bool checkGroups(ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups, out MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group, CommandContext Context) {
+        public static bool checkGroups(ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups, 
+            out MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group, CommandContext Context, long playerId) {
 
             /* No group or too many groups found */
             if (groups.Count < 1) {
@@ -103,14 +104,59 @@ namespace ALE_ShipFixer {
                 return false;
             }
 
+            if (playerId != 0) {
+
+                IMyCubeGrid referenceGrid = null;
+
+                foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
+
+                    IMyCubeGrid grid = groupNodes.NodeData;
+
+                    if (grid.Physics == null)
+                        continue;
+
+                    /* We are not the server and playerId is not owner */
+                    if (!grid.BigOwners.Contains(playerId))
+                        continue;
+
+                    referenceGrid = grid;
+                    break;
+                }
+
+                if (referenceGrid == null) {
+                    Context.Respond("Grid seems to be owned by a different player.");
+                    return false;
+                }
+
+                foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
+
+                    IMyCubeGrid grid = groupNodes.NodeData;
+
+                    if (grid.Physics == null)
+                        continue;
+
+                    if (grid == referenceGrid)
+                        continue;
+
+                    if (grid.IsSameConstructAs(referenceGrid))
+                        continue;
+
+                    /* We are not the server and playerId is not owner */
+                    if (!grid.BigOwners.Contains(playerId)) {
+                        Context.Respond("One of the connected grids is owned by a different player.");
+                        return false;
+                    }
+                }
+            }
+
             return true;
         }
 
-        private bool fixGroups(ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups, CommandContext Context) {
+        private bool fixGroups(ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups, CommandContext Context, long playerId) {
 
             MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group = null;
 
-            if (!checkGroups(groups, out group, Context))
+            if (!checkGroups(groups, out group, Context, playerId))
                 return false;
 
             return fixGroup(group, Context);
@@ -273,6 +319,9 @@ namespace ALE_ShipFixer {
                 foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
 
                     IMyCubeGrid grid = groupNodes.NodeData;
+
+                    if (grid.Physics == null)
+                        continue;
 
                     /* Gridname is wrong ignore */
                     if (!grid.CustomName.Equals(gridName))

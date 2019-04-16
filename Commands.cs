@@ -42,7 +42,7 @@ namespace ALE_ShipFixer {
             if (Context.Player != null)
                 playerId = Context.Player.IdentityId;
 
-            if (!checkConformation(playerId, gridName, null))
+            if (!checkConformation(playerId, 0, gridName, null))
                 return;
 
             try {
@@ -76,7 +76,7 @@ namespace ALE_ShipFixer {
                 return;
             }
 
-            if (!checkConformation(playerId, "nogrid", character))
+            if (!checkConformation(playerId, 0, "nogrid", character))
                 return;
 
             try {
@@ -142,7 +142,7 @@ namespace ALE_ShipFixer {
                 currentCooldownMap.Add(playerId, currentCooldown);
             }
 
-            if (!checkConformation(playerId, gridName, null))
+            if (!checkConformation(playerId, playerId, gridName, null))
                 return;
 
             try {
@@ -200,7 +200,7 @@ namespace ALE_ShipFixer {
                 currentCooldownMap.Add(playerId, currentCooldown);
             }
 
-            if (!checkConformation(playerId, "nogrid", character))
+            if (!checkConformation(playerId, playerId, "nogrid", character))
                 return;
 
             try {
@@ -217,12 +217,12 @@ namespace ALE_ShipFixer {
         }
 
 
-        private bool checkConformation(long playerId, string gridName, IMyCharacter character) {
+        private bool checkConformation(long executingPlayerId, long playerId, string gridName, IMyCharacter character) {
 
             var confirmationCooldownMap = Plugin.ConfirmationsMap;
             CurrentCooldown confirmationCooldown = null;
 
-            if (confirmationCooldownMap.TryGetValue(playerId, out confirmationCooldown)) {
+            if (confirmationCooldownMap.TryGetValue(executingPlayerId, out confirmationCooldown)) {
 
                 long remainingSeconds = confirmationCooldown.getRemainingSeconds(gridName);
 
@@ -243,7 +243,7 @@ namespace ALE_ShipFixer {
                     return false;
 
                 confirmationCooldown = new CurrentCooldown(Plugin.CooldownConfirmation);
-                confirmationCooldownMap.Add(playerId, confirmationCooldown);
+                confirmationCooldownMap.Add(executingPlayerId, confirmationCooldown);
 
                 Context.Respond("Are you sure you want to continue? Enter the command again within " + Plugin.CooldownConfirmationSeconds + " seconds to confirm.");
 
@@ -251,7 +251,7 @@ namespace ALE_ShipFixer {
                 return false;
             }
 
-            confirmationCooldownMap.Remove(playerId);
+            confirmationCooldownMap.Remove(executingPlayerId);
             return true;
         }
 
@@ -266,7 +266,7 @@ namespace ALE_ShipFixer {
 
             MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group = null;
 
-            if (!ShipFixerPlugin.checkGroups(groups, out group, Context))
+            if (!ShipFixerPlugin.checkGroups(groups, out group, Context, playerId))
                 return false;
 
             return true;
