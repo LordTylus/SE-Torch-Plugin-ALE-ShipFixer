@@ -78,26 +78,40 @@ namespace ALE_ShipFixer {
             return fixGroups(groups, Context);
         }
 
-        private bool fixGroups(ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups, CommandContext Context) {
+        public static bool checkGroups(ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups, out MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group, CommandContext Context) {
 
             /* No group or too many groups found */
             if (groups.Count < 1) {
-                Context.Respond("Could not find your Grid.");
+
+                Context.Respond("Could not find your Grid. Check if ownership is correct");
+                group = null;
+
                 return false;
             }
 
             /* too many groups found */
             if (groups.Count > 1) {
+
                 Context.Respond("Found multiple Grids with same Name. Rename your grid first to something unique.");
+                group = null;
+
                 return false;
             }
+
+            if (!groups.TryPeek(out group)) {
+                Context.Respond("Could not work with found grid for unknown reason.");
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool fixGroups(ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups, CommandContext Context) {
 
             MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group = null;
 
-            if (!groups.TryPeek(out group)) {
-                Context.Respond("Could not find your Grid.");
+            if (!checkGroups(groups, out group, Context))
                 return false;
-            }
 
             return fixGroup(group, Context);
         }
@@ -182,10 +196,11 @@ namespace ALE_ShipFixer {
             foreach (var ent in ents)
                 MyAPIGateway.Entities.AddEntity(ent, true);
 
+            Context.Respond("Ship was fixed!");
             return true;
         }
 
-        private ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> FindLookAtGridGroup(IMyCharacter controlledEntity, long playerId) {
+        public static ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> FindLookAtGridGroup(IMyCharacter controlledEntity, long playerId) {
 
             const float range = 5000;
             Matrix worldMatrix;
@@ -257,7 +272,7 @@ namespace ALE_ShipFixer {
             return bag;
         }
 
-        private ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> findGridGroupsForPlayer(string gridName, long playerId) {
+        public static ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> findGridGroupsForPlayer(string gridName, long playerId) {
 
             ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups = new ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group>();
             Parallel.ForEach(MyCubeGridGroups.Static.Physical.Groups, group => {
