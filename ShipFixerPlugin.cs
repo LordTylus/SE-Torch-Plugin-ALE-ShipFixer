@@ -149,21 +149,6 @@ namespace ALE_ShipFixer {
                 }
             }
 
-            return true;
-        }
-
-        private bool fixGroups(ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups, CommandContext Context, long playerId) {
-
-            MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group = null;
-
-            if (!checkGroups(groups, out group, Context, playerId))
-                return false;
-
-            return fixGroup(group, Context);
-        }
-
-        private bool fixGroup(MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group, CommandContext Context) {
-
             foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
 
                 IMyCubeGrid grid = groupNodes.NodeData;
@@ -181,18 +166,33 @@ namespace ALE_ShipFixer {
                     IMyLandingGear landingGear = block as IMyLandingGear;
 
                     if (landingGear != null && landingGear.IsLocked) {
-                        Context.Respond("Some Landing-Gears are still Locked. Please unlock first!");
+                        Context.Respond("Unlock all landing gears and try again.");
                         return false;
                     }
 
                     IMyShipController controller = block as IMyShipController;
 
                     if (controller != null && controller.IsUnderControl) {
-                        Context.Respond("Cockpits or Seats are still occupied. Clear them first! Dont forget to check the toilet!");
+                        Context.Respond("Cockpits or seats are still occupied! Clear them first and try again. Dont forget to check the toilet!");
                         return false;
                     }
                 }
             }
+
+            return true;
+        }
+
+        private bool fixGroups(ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups, CommandContext Context, long playerId) {
+
+            MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group = null;
+
+            if (!checkGroups(groups, out group, Context, playerId))
+                return false;
+
+            return fixGroup(group, Context);
+        }
+
+        private bool fixGroup(MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group, CommandContext Context) {
 
             List<MyObjectBuilder_EntityBase> objectBuilderList = new List<MyObjectBuilder_EntityBase>();
 
