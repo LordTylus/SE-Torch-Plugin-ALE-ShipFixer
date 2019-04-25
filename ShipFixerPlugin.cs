@@ -212,8 +212,11 @@ namespace ALE_ShipFixer {
 
                     Log.Warn("Grid " + grid.CustomName + " was removed for later paste");
 
-                    MyAPIGateway.Utilities.InvokeOnGameThread(() => entity.Delete());
-                    entity.Close();
+                    MyAPIGateway.Utilities.InvokeOnGameThread(() => {
+                        entity.Delete();
+                        entity.Close();
+                    });
+
                     continue;
                 }
             }
@@ -230,10 +233,13 @@ namespace ALE_ShipFixer {
                 ents.Add(ent);
             }
 
-            MyAPIGateway.Multiplayer.SendEntitiesCreated(objectBuilderList);
+            MyAPIGateway.Utilities.InvokeOnGameThread(() => {
 
-            foreach (var ent in ents)
-                MyAPIGateway.Entities.AddEntity(ent, true);
+                MyAPIGateway.Multiplayer.SendEntitiesCreated(objectBuilderList);
+
+                foreach (var ent in ents)
+                    MyAPIGateway.Entities.AddEntity(ent, true);
+            });
 
             Context.Respond("Ship was fixed!");
             return true;
