@@ -20,15 +20,21 @@ using Torch.Commands;
 using System.IO;
 using System;
 using System.Linq;
+using Torch.API.Plugins;
+using System.Windows.Controls;
 
 namespace ALE_ShipFixer {
 
-    public class ShipFixerPlugin : TorchPluginBase {
+    public class ShipFixerPlugin : TorchPluginBase, IWpfPlugin {
 
         public static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
         private Dictionary<long, CurrentCooldown> _currentCooldownMap = new Dictionary<long, CurrentCooldown>();
         private Dictionary<long, CurrentCooldown> _confirmations = new Dictionary<long, CurrentCooldown>();
+
+        private Control _control;
+        public UserControl GetControl() => _control ?? (_control = new Control(this));
+
 
         private Persistent<ShipFixerConfig> _config;
         public ShipFixerConfig Config => _config?.Data;
@@ -60,7 +66,16 @@ namespace ALE_ShipFixer {
                 Log.Info("Create Default Config, because none was found!");
 
                 _config = new Persistent<ShipFixerConfig>(configFile, new ShipFixerConfig());
+                Save();
+            }
+        }
+
+        public void Save() {
+            try {
                 _config.Save();
+                Log.Info("Configuration Saved.");
+            } catch (IOException) {
+                Log.Warn("Configuration failed to save");
             }
         }
 

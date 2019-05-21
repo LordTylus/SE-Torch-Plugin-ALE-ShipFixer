@@ -13,11 +13,8 @@ namespace ALE_ShipFixer {
 
         private String command;
 
-        public CurrentCooldown(long cooldown) {
+        public void startCooldown(string command, long cooldown) {
             this._currentCooldown = cooldown;
-        }
-
-        public void startCooldown(String command) {
             this.command = command;
             this._startTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         }

@@ -138,7 +138,7 @@ namespace ALE_ShipFixer {
 
             } else {
 
-                currentCooldown = new CurrentCooldown(Plugin.Cooldown);
+                currentCooldown = new CurrentCooldown();
                 currentCooldownMap.Add(playerId, currentCooldown);
             }
 
@@ -150,7 +150,7 @@ namespace ALE_ShipFixer {
                 if (Plugin.fixShip(gridName, playerId, Context)) {
 
                     Log.Info("Cooldown for Player " + player + " started!");
-                    currentCooldown.startCooldown(null);
+                    currentCooldown.startCooldown(null, Plugin.Cooldown);
                 }
 
             } catch (Exception e) {
@@ -196,7 +196,7 @@ namespace ALE_ShipFixer {
 
             } else {
 
-                currentCooldown = new CurrentCooldown(Plugin.Cooldown);
+                currentCooldown = new CurrentCooldown();
                 currentCooldownMap.Add(playerId, currentCooldown);
             }
 
@@ -208,7 +208,7 @@ namespace ALE_ShipFixer {
                 if (Plugin.fixShip(character, playerId, Context)) {
 
                     Log.Info("Cooldown for Player " + player + " started!");
-                    currentCooldown.startCooldown(null);
+                    currentCooldown.startCooldown(null, Plugin.Cooldown);
                 }
 
             } catch (Exception e) {
@@ -232,7 +232,7 @@ namespace ALE_ShipFixer {
                         return false;
 
                     Context.Respond("Are you sure you want to continue? Enter the command again within " + Plugin.CooldownConfirmationSeconds + " seconds to confirm.");
-                    confirmationCooldown.startCooldown(gridName);
+                    confirmationCooldown.startCooldown(gridName, Plugin.CooldownConfirmation);
                     return false;
                 }
 
@@ -242,12 +242,12 @@ namespace ALE_ShipFixer {
                 if (!checkGridFound(playerId, gridName, character))
                     return false;
 
-                confirmationCooldown = new CurrentCooldown(Plugin.CooldownConfirmation);
+                confirmationCooldown = new CurrentCooldown();
                 confirmationCooldownMap.Add(executingPlayerId, confirmationCooldown);
 
                 Context.Respond("Are you sure you want to continue? Enter the command again within " + Plugin.CooldownConfirmationSeconds + " seconds to confirm.");
 
-                confirmationCooldown.startCooldown(gridName);
+                confirmationCooldown.startCooldown(gridName, Plugin.CooldownConfirmation);
                 return false;
             }
 
