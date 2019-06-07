@@ -31,6 +31,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="netstandard" />
     <Reference Include="NLog">
       <HintPath>..\..\Server\torch-server\NLog.dll</HintPath>
     </Reference>
