@@ -20,7 +20,7 @@ namespace ALE_ShipFixer {
         [Permission(MyPromoteLevel.Moderator)]
         public void FixShipMod() {
 
-            List<String> args = Context.Args;
+            List<string> args = Context.Args;
 
             if (args.Count == 0) {
 
@@ -92,7 +92,12 @@ namespace ALE_ShipFixer {
         [Permission(MyPromoteLevel.None)]
         public void FixShipPlayer() {
 
-            List<String> args = Context.Args;
+            if(!Plugin.PlayerCommandEnabled) {
+                Context.Respond("This command was disabled for players use!");
+                return;
+            }
+
+            List<string> args = Context.Args;
 
             if (args.Count == 0) {
 
@@ -215,7 +220,6 @@ namespace ALE_ShipFixer {
                 Log.Error("Error on fixing ship", e);
             }
         }
-
 
         private bool checkConformation(long executingPlayerId, long playerId, string gridName, IMyCharacter character) {
 

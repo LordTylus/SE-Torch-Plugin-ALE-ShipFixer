@@ -1,15 +1,12 @@
 ﻿using NLog;
 using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
-using Sandbox.ModAPI.Ingame;
-using SpaceEngineers.Game.ModAPI;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using VRage.Groups;
 using VRage.ModAPI;
 using VRage.ObjectBuilders;
 using VRageMath;
-using IMyShipConnector = Sandbox.ModAPI.Ingame.IMyShipConnector;
 using IMyShipController = Sandbox.ModAPI.IMyShipController;
 using IMyTerminalBlock = Sandbox.ModAPI.Ingame.IMyTerminalBlock;
 using Torch;
@@ -46,6 +43,7 @@ namespace ALE_ShipFixer {
         public long Cooldown { get { return Config.CooldownInSeconds * 1000; } }
         public long CooldownConfirmationSeconds { get { return Config.ConfirmationInSeconds; } }
         public long CooldownConfirmation { get { return Config.ConfirmationInSeconds * 1000; } }
+        public bool PlayerCommandEnabled { get { return Config.PlayerCommandEnabled; } }
 
         /// <inheritdoc />
         public override void Init(ITorchBase torch) {
@@ -178,13 +176,6 @@ namespace ALE_ShipFixer {
                     if (block == null)
                         continue;
 
-                    IMyLandingGear landingGear = block as IMyLandingGear;
-
-                    if (landingGear != null && landingGear.IsLocked) {
-                        Context.Respond("Unlock all landing gears and try again.");
-                        return false;
-                    }
-
                     IMyShipController controller = block as IMyShipController;
 
                     if (controller != null && controller.IsUnderControl) {
@@ -209,6 +200,12 @@ namespace ALE_ShipFixer {
 
         private bool fixGroup(MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group, CommandContext Context) {
 
+            string playerName = "Server";
+
+            IMyPlayer player = Context.Player;
+            if (player != null)
+                playerName = player.DisplayName;
+
             List<MyObjectBuilder_EntityBase> objectBuilderList = new List<MyObjectBuilder_EntityBase>();
 
             foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
@@ -225,7 +222,7 @@ namespace ALE_ShipFixer {
 
                     var entity = grid as IMyEntity;
 
-                    Log.Warn("Grid " + grid.CustomName + " was removed for later paste");
+                    Log.Warn("Player "+ playerName + " used ShipFixerPlugin on Grid " + grid.CustomName + " for cut & paste!");
 
                     MyAPIGateway.Utilities.InvokeOnGameThread(() => {
                         entity.Delete();
