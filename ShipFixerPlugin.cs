@@ -19,6 +19,7 @@ using System;
 using System.Linq;
 using Torch.API.Plugins;
 using System.Windows.Controls;
+using VRage.Game;
 
 namespace ALE_ShipFixer {
 
@@ -240,6 +241,12 @@ namespace ALE_ShipFixer {
 
                 if (ob == null)
                     continue;
+
+                if (Config.RemoveBlueprintsFromProjectors) 
+                    if (ob is MyObjectBuilder_CubeGrid grid) 
+                        foreach (MyObjectBuilder_CubeBlock cubeBlock in grid.CubeBlocks) 
+                            if (cubeBlock is MyObjectBuilder_ProjectorBase projector)
+                                projector.ProjectedGrids.Clear();
 
                 var ent = MyAPIGateway.Entities.CreateFromObjectBuilder(ob);
                 ents.Add(ent);
