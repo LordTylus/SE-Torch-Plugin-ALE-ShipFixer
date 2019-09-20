@@ -222,18 +222,23 @@ namespace ALE_ShipFixer {
                                     projector.ProjectedGrids = null;
 
                     objectBuilderList.Add(ob);
-
-                    var entity = grid as IMyEntity;
-
-                    Log.Warn("Player "+ playerName + " used ShipFixerPlugin on Grid " + grid.CustomName + " for cut & paste!");
-
-                    MyAPIGateway.Utilities.InvokeOnGameThread(() => {
-                        entity.Delete();
-                        entity.Close();
-                    });
-
-                    continue;
                 }
+            }
+
+            foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
+
+                IMyCubeGrid grid = groupNodes.NodeData;
+
+                grid.Physics.LinearVelocity = Vector3.Zero;
+
+                var entity = grid as IMyEntity;
+
+                Log.Warn("Player " + playerName + " used ShipFixerPlugin on Grid " + grid.CustomName + " for cut & paste!");
+
+                MyAPIGateway.Utilities.InvokeOnGameThread(() => {
+                    entity.Delete();
+                    entity.Close();
+                });
             }
 
             MyAPIGateway.Entities.RemapObjectBuilderCollection(objectBuilderList);
