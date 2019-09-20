@@ -204,10 +204,12 @@ namespace ALE_ShipFixer {
                 playerName = player.DisplayName;
 
             List<MyObjectBuilder_EntityBase> objectBuilderList = new List<MyObjectBuilder_EntityBase>();
+            List<MyCubeGrid> gridsList = new List<MyCubeGrid>();
 
             foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
 
-                IMyCubeGrid grid = groupNodes.NodeData;
+                MyCubeGrid grid = groupNodes.NodeData;
+                gridsList.Add(grid);
 
                 grid.Physics.LinearVelocity = Vector3.Zero;
 
@@ -225,41 +227,27 @@ namespace ALE_ShipFixer {
                 }
             }
 
-            foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
-
-                IMyCubeGrid grid = groupNodes.NodeData;
+            foreach (MyCubeGrid grid in gridsList) {
 
                 grid.Physics.LinearVelocity = Vector3.Zero;
 
                 var entity = grid as IMyEntity;
 
-                Log.Warn("Player " + playerName + " used ShipFixerPlugin on Grid " + grid.CustomName + " for cut & paste!");
+                Log.Warn("Player " + playerName + " used ShipFixerPlugin on Grid " + grid.DisplayName + " for cut & paste!");
 
-                MyAPIGateway.Utilities.InvokeOnGameThread(() => {
-                    entity.Delete();
-                    entity.Close();
-                });
+                entity.Delete();
+                entity.Close();
             }
 
             MyAPIGateway.Entities.RemapObjectBuilderCollection(objectBuilderList);
-            var ents = new List<IMyEntity>();
 
             foreach (var ob in objectBuilderList) {
 
                 if (ob == null)
                     continue;
 
-                var ent = MyAPIGateway.Entities.CreateFromObjectBuilder(ob);
-                ents.Add(ent);
+                MyEntities.CreateFromObjectBuilderParallel(ob, true);
             }
-
-            MyAPIGateway.Utilities.InvokeOnGameThread(() => {
-
-                MyAPIGateway.Multiplayer.SendEntitiesCreated(objectBuilderList);
-
-                foreach (var ent in ents)
-                    MyAPIGateway.Entities.AddEntity(ent, true);
-            });
 
             Context.Respond("Ship was fixed!");
             return true;
