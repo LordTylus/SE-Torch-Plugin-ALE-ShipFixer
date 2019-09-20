@@ -42,15 +42,15 @@ namespace ALE_ShipFixer {
             if (Context.Player != null)
                 playerId = Context.Player.IdentityId;
 
-            if (!checkConformation(playerId, 0, gridName, null))
+            if (!CheckConformation(playerId, 0, gridName, null))
                 return;
 
             try {
 
-                Plugin.fixShip(gridName, 0, Context);
+                Plugin.FixShip(gridName, 0, Context);
 
             } catch (Exception e) {
-                Log.Error("Error on fixing ship", e);
+                Log.Error(e, "Error on fixing ship");
             }
         }
 
@@ -58,7 +58,7 @@ namespace ALE_ShipFixer {
 
             IMyPlayer player = Context.Player;
 
-            long playerId = 0L;
+            long playerId;
 
             if (player == null) {
 
@@ -76,15 +76,15 @@ namespace ALE_ShipFixer {
                 return;
             }
 
-            if (!checkConformation(playerId, 0, "nogrid", character))
+            if (!CheckConformation(playerId, 0, "nogrid", character))
                 return;
 
             try {
 
-                Plugin.fixShip(character, 0, Context);
+                Plugin.FixShip(character, 0, Context);
 
             } catch (Exception e) {
-                Log.Error("Error on fixing ship", e);
+                Log.Error(e, "Error on fixing ship");
             }
         }
 
@@ -116,7 +116,7 @@ namespace ALE_ShipFixer {
 
             IMyPlayer player = Context.Player;
 
-            long playerId = 0L;
+            long playerId;
 
             if (player == null) {
 
@@ -129,9 +129,8 @@ namespace ALE_ShipFixer {
 
             var currentCooldownMap = Plugin.CurrentCooldownMap;
 
-            CurrentCooldown currentCooldown = null;
 
-            if (currentCooldownMap.TryGetValue(playerId, out currentCooldown)) {
+            if (currentCooldownMap.TryGetValue(playerId, out CurrentCooldown currentCooldown)) {
 
                 long remainingSeconds = currentCooldown.getRemainingSeconds(null);
 
@@ -147,19 +146,19 @@ namespace ALE_ShipFixer {
                 currentCooldownMap.Add(playerId, currentCooldown);
             }
 
-            if (!checkConformation(playerId, playerId, gridName, null))
+            if (!CheckConformation(playerId, playerId, gridName, null))
                 return;
 
             try {
 
-                if (Plugin.fixShip(gridName, playerId, Context)) {
+                if (Plugin.FixShip(gridName, playerId, Context)) {
 
                     Log.Info("Cooldown for Player " + player + " started!");
                     currentCooldown.startCooldown(null, Plugin.Cooldown);
                 }
 
             } catch (Exception e) {
-                Log.Error("Error on fixing ship", e);
+                Log.Error(e, "Error on fixing ship");
             }
         }
 
@@ -167,7 +166,7 @@ namespace ALE_ShipFixer {
 
             IMyPlayer player = Context.Player;
 
-            long playerId = 0L;
+            long playerId;
 
             if (player == null) {
 
@@ -187,9 +186,8 @@ namespace ALE_ShipFixer {
 
             var currentCooldownMap = Plugin.CurrentCooldownMap;
 
-            CurrentCooldown currentCooldown = null;
 
-            if (currentCooldownMap.TryGetValue(playerId, out currentCooldown)) {
+            if (currentCooldownMap.TryGetValue(playerId, out CurrentCooldown currentCooldown)) {
 
                 long remainingSeconds = currentCooldown.getRemainingSeconds(null);
 
@@ -205,34 +203,33 @@ namespace ALE_ShipFixer {
                 currentCooldownMap.Add(playerId, currentCooldown);
             }
 
-            if (!checkConformation(playerId, playerId, "nogrid", character))
+            if (!CheckConformation(playerId, playerId, "nogrid", character))
                 return;
 
             try {
 
-                if (Plugin.fixShip(character, playerId, Context)) {
+                if (Plugin.FixShip(character, playerId, Context)) {
 
                     Log.Info("Cooldown for Player " + player + " started!");
                     currentCooldown.startCooldown(null, Plugin.Cooldown);
                 }
 
             } catch (Exception e) {
-                Log.Error("Error on fixing ship", e);
+                Log.Error(e, "Error on fixing ship");
             }
         }
 
-        private bool checkConformation(long executingPlayerId, long playerId, string gridName, IMyCharacter character) {
+        private bool CheckConformation(long executingPlayerId, long playerId, string gridName, IMyCharacter character) {
 
             var confirmationCooldownMap = Plugin.ConfirmationsMap;
-            CurrentCooldown confirmationCooldown = null;
 
-            if (confirmationCooldownMap.TryGetValue(executingPlayerId, out confirmationCooldown)) {
+            if (confirmationCooldownMap.TryGetValue(executingPlayerId, out CurrentCooldown confirmationCooldown)) {
 
                 long remainingSeconds = confirmationCooldown.getRemainingSeconds(gridName);
 
                 if (remainingSeconds == 0) {
 
-                    if (!checkGridFound(playerId, gridName, character))
+                    if (!CheckGridFound(playerId, gridName, character))
                         return false;
 
                     Context.Respond("Are you sure you want to continue? Enter the command again within " + Plugin.CooldownConfirmationSeconds + " seconds to confirm.");
@@ -242,8 +239,7 @@ namespace ALE_ShipFixer {
 
             } else {
 
-
-                if (!checkGridFound(playerId, gridName, character))
+                if (!CheckGridFound(playerId, gridName, character))
                     return false;
 
                 confirmationCooldown = new CurrentCooldown();
@@ -259,18 +255,16 @@ namespace ALE_ShipFixer {
             return true;
         }
 
-        private bool checkGridFound(long playerId, string gridName, IMyCharacter character) {
+        private bool CheckGridFound(long playerId, string gridName, IMyCharacter character) {
 
             ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups;
 
             if (character == null)
-                groups = ShipFixerPlugin.findGridGroupsForPlayer(gridName, playerId);
+                groups = ShipFixerPlugin.FindGridGroupsForPlayer(gridName, playerId);
             else
                 groups = ShipFixerPlugin.FindLookAtGridGroup(character, playerId);
 
-            MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group = null;
-
-            if (!ShipFixerPlugin.checkGroups(groups, out group, Context, playerId))
+            if (!ShipFixerPlugin.CheckGroups(groups, out _, Context, playerId))
                 return false;
 
             return true;

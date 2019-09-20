@@ -27,9 +27,6 @@ namespace ALE_ShipFixer {
 
         public static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
-        private Dictionary<long, CurrentCooldown> _currentCooldownMap = new Dictionary<long, CurrentCooldown>();
-        private Dictionary<long, CurrentCooldown> _confirmations = new Dictionary<long, CurrentCooldown>();
-
         private Control _control;
         public UserControl GetControl() => _control ?? (_control = new Control(this));
 
@@ -37,9 +34,9 @@ namespace ALE_ShipFixer {
         private Persistent<ShipFixerConfig> _config;
         public ShipFixerConfig Config => _config?.Data;
 
-        public Dictionary<long, CurrentCooldown> CurrentCooldownMap { get{ return _currentCooldownMap; } }
+        public Dictionary<long, CurrentCooldown> CurrentCooldownMap { get; } = new Dictionary<long, CurrentCooldown>();
 
-        public Dictionary<long, CurrentCooldown> ConfirmationsMap { get { return _confirmations; } }
+        public Dictionary<long, CurrentCooldown> ConfirmationsMap { get; } = new Dictionary<long, CurrentCooldown>();
 
         public long Cooldown { get { return Config.CooldownInSeconds * 1000; } }
         public long CooldownConfirmationSeconds { get { return Config.ConfirmationInSeconds; } }
@@ -78,21 +75,21 @@ namespace ALE_ShipFixer {
             }
         }
 
-        public bool fixShip(IMyCharacter character, long playerId, CommandContext Context) {
+        public bool FixShip(IMyCharacter character, long playerId, CommandContext Context) {
 
             ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups = FindLookAtGridGroup(character, playerId);
 
-            return fixGroups(groups, Context, playerId);
+            return FixGroups(groups, Context, playerId);
         }
 
-        public bool fixShip(string gridName, long playerId, CommandContext Context) {
+        public bool FixShip(string gridName, long playerId, CommandContext Context) {
 
-            ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups = findGridGroupsForPlayer(gridName, playerId);
+            ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups = FindGridGroupsForPlayer(gridName, playerId);
 
-            return fixGroups(groups, Context, playerId);
+            return FixGroups(groups, Context, playerId);
         }
 
-        public static bool checkGroups(ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups, 
+        public static bool CheckGroups(ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups, 
             out MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group, CommandContext Context, long playerId) {
 
             /* No group or too many groups found */
@@ -111,13 +108,14 @@ namespace ALE_ShipFixer {
                 group = null;
 
                 return false;
-            }
-
+            } 
+            
             if (!groups.TryPeek(out group)) {
                 Context.Respond("Could not work with found grid for unknown reason.");
                 return false;
             }
 
+            /* Check if there are Connected grids owned by a different player */
             if (playerId != 0) {
 
                 IMyCubeGrid referenceGrid = null;
@@ -163,6 +161,7 @@ namespace ALE_ShipFixer {
                 }
             }
 
+            /* Check if there are people in the cockpit */
             foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
 
                 IMyCubeGrid grid = groupNodes.NodeData;
@@ -173,13 +172,11 @@ namespace ALE_ShipFixer {
                 gts.GetBlocksOfType<Sandbox.ModAPI.IMyTerminalBlock>(tBlockList);
 
                 foreach (var block in tBlockList) {
-
                     if (block == null)
                         continue;
 
-                    IMyShipController controller = block as IMyShipController;
 
-                    if (controller != null && controller.IsUnderControl) {
+                    if (block is IMyShipController controller && controller.IsUnderControl) {
                         Context.Respond("Cockpits or seats are still occupied! Clear them first and try again. Dont forget to check the toilet!");
                         return false;
                     }
@@ -189,17 +186,16 @@ namespace ALE_ShipFixer {
             return true;
         }
 
-        private bool fixGroups(ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups, CommandContext Context, long playerId) {
+        private bool FixGroups(ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups, CommandContext Context, long playerId) {
 
-            MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group = null;
 
-            if (!checkGroups(groups, out group, Context, playerId))
+            if (!CheckGroups(groups, out MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group, Context, playerId))
                 return false;
 
-            return fixGroup(group, Context);
+            return FixGroup(group, Context);
         }
 
-        private bool fixGroup(MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group, CommandContext Context) {
+        private bool FixGroup(MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group, CommandContext Context) {
 
             string playerName = "Server";
 
@@ -275,9 +271,6 @@ namespace ALE_ShipFixer {
             startPosition = worldMatrix.Translation + worldMatrix.Forward * 0.5f;
             endPosition = worldMatrix.Translation + worldMatrix.Forward * (range + 0.5f);
 
-            var entites = new HashSet<IMyEntity>();
-            MyAPIGateway.Entities.GetEntities(entites, e => e != null);
-
             var list = new Dictionary<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group, double>();
             var ray = new RayD(startPosition, worldMatrix.Forward);
 
@@ -305,9 +298,7 @@ namespace ALE_ShipFixer {
 
                                 double distance = (startPosition - cubeGrid.GridIntegerToWorld(hit.Value)).Length();
 
-                                double oldDistance;
-
-                                if (list.TryGetValue(group, out oldDistance)) {
+                                if (list.TryGetValue(group, out double oldDistance)) {
 
                                     if (distance < oldDistance) {
                                         list.Remove(group);
@@ -336,7 +327,7 @@ namespace ALE_ShipFixer {
             return bag;
         }
 
-        public static ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> findGridGroupsForPlayer(string gridName, long playerId) {
+        public static ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> FindGridGroupsForPlayer(string gridName, long playerId) {
 
             ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups = new ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group>();
             Parallel.ForEach(MyCubeGridGroups.Static.Physical.Groups, group => {
