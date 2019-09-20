@@ -211,9 +211,15 @@ namespace ALE_ShipFixer {
 
                 grid.Physics.LinearVelocity = Vector3.Zero;
 
-                MyObjectBuilder_EntityBase ob = (MyObjectBuilder_EntityBase)grid.GetObjectBuilder();
+                MyObjectBuilder_EntityBase ob = grid.GetObjectBuilder(true);
 
                 if (!objectBuilderList.Contains(ob)) {
+
+                    if (Config.RemoveBlueprintsFromProjectors)
+                        if (ob is MyObjectBuilder_CubeGrid gridBuilder)
+                            foreach (MyObjectBuilder_CubeBlock cubeBlock in gridBuilder.CubeBlocks)
+                                if (cubeBlock is MyObjectBuilder_ProjectorBase projector)
+                                    projector.ProjectedGrids = null;
 
                     objectBuilderList.Add(ob);
 
@@ -237,12 +243,6 @@ namespace ALE_ShipFixer {
 
                 if (ob == null)
                     continue;
-
-                if (Config.RemoveBlueprintsFromProjectors) 
-                    if (ob is MyObjectBuilder_CubeGrid grid) 
-                        foreach (MyObjectBuilder_CubeBlock cubeBlock in grid.CubeBlocks) 
-                            if (cubeBlock is MyObjectBuilder_ProjectorBase projector)
-                                projector.ProjectedGrids.Clear();
 
                 var ent = MyAPIGateway.Entities.CreateFromObjectBuilder(ob);
                 ents.Add(ent);
