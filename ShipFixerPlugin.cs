@@ -2,7 +2,6 @@
 using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
 using System.Collections.Concurrent;
-using System.Threading.Tasks;
 using VRage.Groups;
 using VRage.ModAPI;
 using VRage.ObjectBuilders;
@@ -20,6 +19,8 @@ using System.Linq;
 using Torch.API.Plugins;
 using System.Windows.Controls;
 using VRage.Game;
+using VRage.Game.Entity;
+using System.Threading.Tasks;
 
 namespace ALE_ShipFixer {
 
@@ -229,8 +230,6 @@ namespace ALE_ShipFixer {
 
             foreach (MyCubeGrid grid in gridsList) {
 
-                grid.Physics.LinearVelocity = Vector3.Zero;
-
                 var entity = grid as IMyEntity;
 
                 Log.Warn("Player " + playerName + " used ShipFixerPlugin on Grid " + grid.DisplayName + " for cut & paste!");
@@ -241,13 +240,27 @@ namespace ALE_ShipFixer {
 
             MyAPIGateway.Entities.RemapObjectBuilderCollection(objectBuilderList);
 
-            foreach (var ob in objectBuilderList) {
+            /* Keeps Rotors with lag spike depending on how big the grid is */
+            foreach (var ob in objectBuilderList) 
+                MyEntities.CreateFromObjectBuilderAndAdd(ob, false);
 
-                if (ob == null)
-                    continue;
+            /* big grids or on bad simspeed rotors fall off after paste */
+            //            foreach (var ob in objectBuilderList)
+            //                MyEntities.CreateFromObjectBuilderParralel(ob, true);
 
-                MyEntities.CreateFromObjectBuilderParallel(ob, true);
-            }
+            /* Parallel similar to MyPrefabManager no lagspike, but rotors fall off again :-( */
+            //            var newGrids = new ConcurrentBag<MyEntity>();
+            //
+            //            MyAPIGateway.Parallel.Start(() => {
+            //
+            //                foreach (var ob in objectBuilderList) 
+            //                    newGrids.Add(MyEntities.CreateFromObjectBuilder(ob, false));
+            //
+            //            }, () => {
+            //
+            //                foreach (var grid in newGrids)
+            //                    MyEntities.Add(grid, true);
+            //            });
 
             Context.Respond("Ship was fixed!");
             return true;
