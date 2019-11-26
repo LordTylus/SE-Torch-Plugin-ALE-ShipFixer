@@ -242,7 +242,7 @@ namespace ALE_ShipFixer {
 
             /* Keeps Rotors with lag spike depending on how big the grid is */
             foreach (var ob in objectBuilderList) 
-                MyEntities.CreateFromObjectBuilderAndAdd(ob, false);
+                MyEntities.CreateFromObjectBuilderAndAdd(ob, true);
 
             /* big grids or on bad simspeed rotors fall off after paste */
             //            foreach (var ob in objectBuilderList)
