@@ -240,27 +240,17 @@ namespace ALE_ShipFixer {
 
             MyAPIGateway.Entities.RemapObjectBuilderCollection(objectBuilderList);
 
-            /* Keeps Rotors with lag spike depending on how big the grid is */
-            foreach (var ob in objectBuilderList) 
-                MyEntities.CreateFromObjectBuilderAndAdd(ob, true);
+            bool hasMultipleGrids = objectBuilderList.Count > 1;
 
-            /* big grids or on bad simspeed rotors fall off after paste */
-            //            foreach (var ob in objectBuilderList)
-            //                MyEntities.CreateFromObjectBuilderParralel(ob, true);
+            if (!hasMultipleGrids) {
 
-            /* Parallel similar to MyPrefabManager no lagspike, but rotors fall off again :-( */
-            //            var newGrids = new ConcurrentBag<MyEntity>();
-            //
-            //            MyAPIGateway.Parallel.Start(() => {
-            //
-            //                foreach (var ob in objectBuilderList) 
-            //                    newGrids.Add(MyEntities.CreateFromObjectBuilder(ob, false));
-            //
-            //            }, () => {
-            //
-            //                foreach (var grid in newGrids)
-            //                    MyEntities.Add(grid, true);
-            //            });
+                foreach (var ob in objectBuilderList)
+                    MyEntities.CreateFromObjectBuilderParallel(ob, true);
+
+            } else {
+
+                MyEntities.Load(objectBuilderList);
+            }
 
             Context.Respond("Ship was fixed!");
             return true;
