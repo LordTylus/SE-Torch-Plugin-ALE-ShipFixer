@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<PluginManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Name>ALE ShipFixer</Name>
+  <Guid>894d12eb-68e1-4eaa-b8c2-263f004629d7</Guid>
+  <Repository>None</Repository>
+  <Version>v1.0.3.5</Version>
+</PluginManifest>
