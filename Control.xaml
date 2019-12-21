@@ -25,6 +25,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Column="0" Grid.Row ="0" VerticalAlignment="Center" Text="ALE Shipfixer" FontWeight="Bold" FontSize="16" Grid.ColumnSpan="2" Margin="5"/>
@@ -41,16 +42,19 @@
         <TextBlock Grid.Column="0" Grid.Row ="4" VerticalAlignment="Center" Text="Player command (!fixship) enabled" Margin="5"/>
         <CheckBox Name="PlayerCommandEnabled" Grid.Column="1" Grid.Row ="4" Grid.ColumnSpan="2" Margin="5" IsChecked="{Binding PlayerCommandEnabled}"/>
 
-        <Button Grid.Column="2" Grid.Row="5" Content="Save Config" Margin="5" Click="SaveButton_OnClick"></Button>
+        <TextBlock Grid.Column="0" Grid.Row ="5" VerticalAlignment="Center" Text="Allow Faction-Members to run (!fixship) on all faction grids" Margin="5"/>
+        <CheckBox Name="FixShipFactionEnabled" Grid.Column="1" Grid.Row ="5" Grid.ColumnSpan="2" Margin="5" IsChecked="{Binding FixShipFactionEnabled}"/>
+
+        <Button Grid.Column="2" Grid.Row="6" Content="Save Config" Margin="5" Click="SaveButton_OnClick"></Button>
         
-        <TextBlock Grid.Column="0" Grid.Row ="6" VerticalAlignment="Center" Grid.ColumnSpan="2" Text="Commands" Margin="5" FontWeight="Bold" />
-        <TextBlock Grid.Column="0" Grid.Row ="7" VerticalAlignment="Center" Text="!fixship" Margin="5" />
-        <TextBlock Grid.Column="1" Grid.Row ="7" VerticalAlignment="Center" Grid.ColumnSpan="2" TextWrapping="Wrap" Text="Cuts and pastes ship you are looking at (accessible to all)" Margin="5"/>
-        <TextBlock Grid.Column="0" Grid.Row ="8" VerticalAlignment="Center" Text="!fixship &lt;shipname&gt;" Margin="5"/>
-        <TextBlock Grid.Column="1" Grid.Row ="8" VerticalAlignment="Center" Grid.ColumnSpan="2" TextWrapping="Wrap" Text="Cuts and pastes ship you are looking at by given name (accessible to all)" Margin="5"/>
-        <TextBlock Grid.Column="0" Grid.Row ="9" VerticalAlignment="Center" Text="!fixshipmod" Margin="5"/>
-        <TextBlock Grid.Column="1" Grid.Row ="9" VerticalAlignment="Center" Grid.ColumnSpan="2" TextWrapping="Wrap" Text="Cuts and pastes ship you are looking at while ignoring coolodnws (accessible to moderator and above)" Margin="5"/>
-        <TextBlock Grid.Column="0" Grid.Row ="10" VerticalAlignment="Center" Text="!fixshipmod &lt;shipname&gt;" Margin="5"/>
-        <TextBlock Grid.Column="1" Grid.Row ="10" VerticalAlignment="Center" Grid.ColumnSpan="2" TextWrapping="Wrap" Text="Cuts and pastes ship by given name while ignoring coolodnws (accessible to moderator and above)" Margin="5"/>
+        <TextBlock Grid.Column="0" Grid.Row ="7" VerticalAlignment="Center" Grid.ColumnSpan="2" Text="Commands" Margin="5" FontWeight="Bold" />
+        <TextBlock Grid.Column="0" Grid.Row ="8" VerticalAlignment="Center" Text="!fixship" Margin="5" />
+        <TextBlock Grid.Column="1" Grid.Row ="8" VerticalAlignment="Center" Grid.ColumnSpan="2" TextWrapping="Wrap" Text="Cuts and pastes ship you are looking at (accessible to all)" Margin="5"/>
+        <TextBlock Grid.Column="0" Grid.Row ="9" VerticalAlignment="Center" Text="!fixship &lt;shipname&gt;" Margin="5"/>
+        <TextBlock Grid.Column="1" Grid.Row ="9" VerticalAlignment="Center" Grid.ColumnSpan="2" TextWrapping="Wrap" Text="Cuts and pastes ship you are looking at by given name (accessible to all)" Margin="5"/>
+        <TextBlock Grid.Column="0" Grid.Row ="10" VerticalAlignment="Center" Text="!fixshipmod" Margin="5"/>
+        <TextBlock Grid.Column="1" Grid.Row ="10" VerticalAlignment="Center" Grid.ColumnSpan="2" TextWrapping="Wrap" Text="Cuts and pastes ship you are looking at while ignoring coolodnws (accessible to moderator and above)" Margin="5"/>
+        <TextBlock Grid.Column="0" Grid.Row ="11" VerticalAlignment="Center" Text="!fixshipmod &lt;shipname&gt;" Margin="5"/>
+        <TextBlock Grid.Column="1" Grid.Row ="11" VerticalAlignment="Center" Grid.ColumnSpan="2" TextWrapping="Wrap" Text="Cuts and pastes ship by given name while ignoring coolodnws (accessible to moderator and above)" Margin="5"/>
     </Grid>
 </UserControl>

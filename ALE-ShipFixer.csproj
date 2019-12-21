@@ -145,7 +145,6 @@
     <Compile Include="Control.xaml.cs">
       <DependentUpon>Control.xaml</DependentUpon>
     </Compile>
-    <Compile Include="CurrentCooldown.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ShipFixerConfig.cs" />
     <Compile Include="ShipFixerPlugin.cs" />

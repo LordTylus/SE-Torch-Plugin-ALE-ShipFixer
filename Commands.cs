@@ -1,4 +1,5 @@
-﻿using NLog;
+﻿using ALE_Core;
+using NLog;
 using Sandbox.Game.Entities;
 using System;
 using System.Collections.Concurrent;
@@ -129,10 +130,9 @@ namespace ALE_ShipFixer {
 
             var currentCooldownMap = Plugin.CurrentCooldownMap;
 
-
             if (currentCooldownMap.TryGetValue(playerId, out CurrentCooldown currentCooldown)) {
 
-                long remainingSeconds = currentCooldown.getRemainingSeconds(null);
+                long remainingSeconds = currentCooldown.GetRemainingSeconds(null);
 
                 if (remainingSeconds > 0) {
                     Log.Info("Cooldown for Player " + player.DisplayName + " still running! " + remainingSeconds + " seconds remaining!");
@@ -140,10 +140,11 @@ namespace ALE_ShipFixer {
                     return;
                 }
 
+                currentCooldown = CreateNewCooldown(currentCooldownMap, playerId, Plugin.Cooldown);
+
             } else {
 
-                currentCooldown = new CurrentCooldown();
-                currentCooldownMap.Add(playerId, currentCooldown);
+                currentCooldown = CreateNewCooldown(currentCooldownMap, playerId, Plugin.Cooldown);
             }
 
             if (!CheckConformation(playerId, playerId, gridName, null))
@@ -153,8 +154,8 @@ namespace ALE_ShipFixer {
 
                 if (Plugin.FixShip(gridName, playerId, Context)) {
 
-                    Log.Info("Cooldown for Player " + player + " started!");
-                    currentCooldown.startCooldown(null, Plugin.Cooldown);
+                    Log.Info("Cooldown for Player " + player.DisplayName + " started!");
+                    currentCooldown.StartCooldown(null);
                 }
 
             } catch (Exception e) {
@@ -186,10 +187,9 @@ namespace ALE_ShipFixer {
 
             var currentCooldownMap = Plugin.CurrentCooldownMap;
 
-
             if (currentCooldownMap.TryGetValue(playerId, out CurrentCooldown currentCooldown)) {
 
-                long remainingSeconds = currentCooldown.getRemainingSeconds(null);
+                long remainingSeconds = currentCooldown.GetRemainingSeconds(null);
 
                 if (remainingSeconds > 0) {
                     Log.Info("Cooldown for Player " + player.DisplayName + " still running! " + remainingSeconds + " seconds remaining!");
@@ -197,10 +197,11 @@ namespace ALE_ShipFixer {
                     return;
                 }
 
+                currentCooldown = CreateNewCooldown(currentCooldownMap, playerId, Plugin.Cooldown);
+
             } else {
 
-                currentCooldown = new CurrentCooldown();
-                currentCooldownMap.Add(playerId, currentCooldown);
+                currentCooldown = CreateNewCooldown(currentCooldownMap, playerId, Plugin.Cooldown);
             }
 
             if (!CheckConformation(playerId, playerId, "nogrid", character))
@@ -211,7 +212,7 @@ namespace ALE_ShipFixer {
                 if (Plugin.FixShip(character, playerId, Context)) {
 
                     Log.Info("Cooldown for Player " + player + " started!");
-                    currentCooldown.startCooldown(null, Plugin.Cooldown);
+                    currentCooldown.StartCooldown(null);
                 }
 
             } catch (Exception e) {
@@ -225,34 +226,23 @@ namespace ALE_ShipFixer {
 
             if (confirmationCooldownMap.TryGetValue(executingPlayerId, out CurrentCooldown confirmationCooldown)) {
 
-                long remainingSeconds = confirmationCooldown.getRemainingSeconds(gridName);
+                long remainingSeconds = confirmationCooldown.GetRemainingSeconds(gridName);
 
-                if (remainingSeconds == 0) {
-
-                    if (!CheckGridFound(playerId, gridName, character))
-                        return false;
-
-                    Context.Respond("Are you sure you want to continue? Enter the command again within " + Plugin.CooldownConfirmationSeconds + " seconds to confirm.");
-                    confirmationCooldown.startCooldown(gridName, Plugin.CooldownConfirmation);
-                    return false;
+                if (remainingSeconds > 0) {
+                    confirmationCooldownMap.Remove(executingPlayerId);
+                    return true;
                 }
-
-            } else {
-
-                if (!CheckGridFound(playerId, gridName, character))
-                    return false;
-
-                confirmationCooldown = new CurrentCooldown();
-                confirmationCooldownMap.Add(executingPlayerId, confirmationCooldown);
-
-                Context.Respond("Are you sure you want to continue? Enter the command again within " + Plugin.CooldownConfirmationSeconds + " seconds to confirm.");
-
-                confirmationCooldown.startCooldown(gridName, Plugin.CooldownConfirmation);
-                return false;
             }
+             
+            if (!CheckGridFound(playerId, gridName, character))
+                return false;
 
-            confirmationCooldownMap.Remove(executingPlayerId);
-            return true;
+            confirmationCooldown = CreateNewCooldown(confirmationCooldownMap, executingPlayerId, Plugin.CooldownConfirmation);
+
+            Context.Respond("Are you sure you want to continue? Enter the command again within " + Plugin.CooldownConfirmationSeconds + " seconds to confirm.");
+            confirmationCooldown.StartCooldown(gridName);
+
+            return false;
         }
 
         private bool CheckGridFound(long playerId, string gridName, IMyCharacter character) {
@@ -260,14 +250,26 @@ namespace ALE_ShipFixer {
             ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups;
 
             if (character == null)
-                groups = ShipFixerPlugin.FindGridGroupsForPlayer(gridName, playerId);
+                groups = ShipFixerPlugin.FindGridGroupsForPlayer(gridName, playerId, Plugin.FactionFixEnabled);
             else
-                groups = ShipFixerPlugin.FindLookAtGridGroup(character, playerId);
+                groups = ShipFixerPlugin.FindLookAtGridGroup(character, playerId, Plugin.FactionFixEnabled);
 
-            if (!ShipFixerPlugin.CheckGroups(groups, out _, Context, playerId))
+            if (!ShipFixerPlugin.CheckGroups(groups, out _, Context, playerId, Plugin.FactionFixEnabled))
                 return false;
 
             return true;
+        }
+
+        private static CurrentCooldown CreateNewCooldown(Dictionary<long, CurrentCooldown> cooldownMap, long playerId, long cooldown) {
+
+            var currentCooldown = new CurrentCooldown(cooldown);
+
+            if (cooldownMap.ContainsKey(playerId))
+                cooldownMap[playerId] = currentCooldown;
+            else
+                cooldownMap.Add(playerId, currentCooldown);
+
+            return currentCooldown;
         }
     }
 }
