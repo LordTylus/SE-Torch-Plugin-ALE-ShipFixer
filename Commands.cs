@@ -211,7 +211,7 @@ namespace ALE_ShipFixer {
 
                 if (Plugin.FixShip(character, playerId, Context)) {
 
-                    Log.Info("Cooldown for Player " + player + " started!");
+                    Log.Info("Cooldown for Player " + player.DisplayName + " started!");
                     currentCooldown.StartCooldown(null);
                 }
 
