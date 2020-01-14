@@ -23,6 +23,7 @@ using VRage.Game.Entity;
 using System.Threading.Tasks;
 using ALE_Core;
 using ALE_Core.Utils;
+using Sandbox.Common.ObjectBuilders;
 
 namespace ALE_ShipFixer {
 
@@ -221,11 +222,18 @@ namespace ALE_ShipFixer {
 
                 if (!objectBuilderList.Contains(ob)) {
 
-                    if (Config.RemoveBlueprintsFromProjectors)
-                        if (ob is MyObjectBuilder_CubeGrid gridBuilder)
-                            foreach (MyObjectBuilder_CubeBlock cubeBlock in gridBuilder.CubeBlocks)
+                    if (ob is MyObjectBuilder_CubeGrid gridBuilder) {
+
+                        foreach (MyObjectBuilder_CubeBlock cubeBlock in gridBuilder.CubeBlocks) {
+
+                            if (Config.RemoveBlueprintsFromProjectors)
                                 if (cubeBlock is MyObjectBuilder_ProjectorBase projector)
                                     projector.ProjectedGrids = null;
+
+                            if (cubeBlock is MyObjectBuilder_OxygenTank o2Tank)
+                                o2Tank.AutoRefill = false;
+                        }
+                    }
 
                     objectBuilderList.Add(ob);
                 }
