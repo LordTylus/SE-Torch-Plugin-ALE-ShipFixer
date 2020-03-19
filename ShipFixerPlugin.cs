@@ -245,7 +245,6 @@ namespace ALE_ShipFixer {
 
                 Log.Warn("Player " + playerName + " used ShipFixerPlugin on Grid " + grid.DisplayName + " for cut & paste!");
 
-                entity.Delete();
                 entity.Close();
             }
 
