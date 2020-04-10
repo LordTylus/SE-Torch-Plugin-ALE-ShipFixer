@@ -19,7 +19,6 @@ using System.Linq;
 using Torch.API.Plugins;
 using System.Windows.Controls;
 using VRage.Game;
-using VRage.Game.Entity;
 using System.Threading.Tasks;
 using ALE_Core;
 using ALE_Core.Utils;
