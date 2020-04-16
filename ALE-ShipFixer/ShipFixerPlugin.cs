@@ -20,9 +20,10 @@ using Torch.API.Plugins;
 using System.Windows.Controls;
 using VRage.Game;
 using System.Threading.Tasks;
-using ALE_Core;
 using ALE_Core.Utils;
 using Sandbox.Common.ObjectBuilders;
+using ALE_Core.Cooldown;
+using Sandbox.Game.World;
 
 namespace ALE_ShipFixer {
 
@@ -36,9 +37,8 @@ namespace ALE_ShipFixer {
         private Persistent<ShipFixerConfig> _config;
         public ShipFixerConfig Config => _config?.Data;
 
-        public Dictionary<long, CurrentCooldown> CurrentCooldownMap { get; } = new Dictionary<long, CurrentCooldown>();
-
-        public Dictionary<long, CurrentCooldown> ConfirmationsMap { get; } = new Dictionary<long, CurrentCooldown>();
+        public CooldownManager CommandCooldownManager { get; } = new CooldownManager();
+        public CooldownManager ConfirmationCooldownManager { get; } = new CooldownManager();
 
         public long Cooldown { get { return Config.CooldownInSeconds * 1000; } }
         public long CooldownConfirmationSeconds { get { return Config.ConfirmationInSeconds; } }
@@ -50,7 +50,7 @@ namespace ALE_ShipFixer {
         public override void Init(ITorchBase torch) {
             base.Init(torch);
 
-            var configFile = Path.Combine(StoragePath, "ShipFixer.cfg");
+             var configFile = Path.Combine(StoragePath, "ShipFixer.cfg");
 
             try {
 
@@ -78,46 +78,37 @@ namespace ALE_ShipFixer {
             }
         }
 
-        public bool FixShip(IMyCharacter character, long playerId, CommandContext Context) {
+        public CheckResult FixShip(IMyCharacter character, long playerId) {
 
             ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups = FindLookAtGridGroup(character, playerId, FactionFixEnabled);
 
-            return FixGroups(groups, Context, playerId);
+            return FixGroups(groups, playerId);
         }
 
-        public bool FixShip(string gridName, long playerId, CommandContext Context) {
+        public CheckResult FixShip(string gridName, long playerId) {
 
             ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups = FindGridGroupsForPlayer(gridName, playerId, FactionFixEnabled);
 
-            return FixGroups(groups, Context, playerId);
+            return FixGroups(groups, playerId);
         }
 
-        public static bool CheckGroups(ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups, 
-            out MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group, CommandContext Context, long playerId,
-            bool factionFixEnabled) {
+        public static CheckResult CheckGroups(ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups, 
+            out MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group, long playerId, bool factionFixEnabled) {
 
             /* No group or too many groups found */
             if (groups.Count < 1) {
-
-                Context.Respond("Could not find your Grid. Check if ownership is correct");
                 group = null;
-
-                return false;
+                return CheckResult.TOO_FEW_GRIDS;
             }
 
             /* too many groups found */
             if (groups.Count > 1) {
-
-                Context.Respond("Found multiple Grids with same Name. Rename your grid first to something unique.");
                 group = null;
-
-                return false;
+                return CheckResult.TOO_MANY_GRIDS;
             } 
             
-            if (!groups.TryPeek(out group)) {
-                Context.Respond("Could not work with found grid for unknown reason.");
-                return false;
-            }
+            if (!groups.TryPeek(out group)) 
+                return CheckResult.UNKNOWN_PROBLEM;
 
             /* Check if there are Connected grids owned by a different player */
             if (playerId != 0) {
@@ -139,10 +130,8 @@ namespace ALE_ShipFixer {
                     break;
                 }
 
-                if (referenceGrid == null) {
-                    Context.Respond("Grid seems to be owned by a different player.");
-                    return false;
-                }
+                if (referenceGrid == null) 
+                    return CheckResult.OWNED_BY_DIFFERENT_PLAYER;
 
                 foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
 
@@ -158,10 +147,8 @@ namespace ALE_ShipFixer {
                         continue;
 
                     /* We are not the server and playerId is not owner */
-                    if (!OwnershipCorrect(grid, playerId, factionFixEnabled)) {
-                        Context.Respond("One of the connected grids is owned by a different player.");
-                        return false;
-                    }
+                    if (!OwnershipCorrect(grid, playerId, factionFixEnabled))
+                        return CheckResult.OWNED_BY_DIFFERENT_PLAYER;
                 }
             }
 
@@ -179,33 +166,35 @@ namespace ALE_ShipFixer {
                     if (block == null)
                         continue;
 
-
-                    if (block is IMyShipController controller && controller.IsUnderControl) {
-                        Context.Respond("Cockpits or seats are still occupied! Clear them first and try again. Dont forget to check the toilet!");
-                        return false;
-                    }
+                    if (block is IMyShipController controller && controller.IsUnderControl)
+                        return CheckResult.GRID_OCCUPIED;
                 }
             }
 
-            return true;
+            return CheckResult.OK;
         }
 
-        private bool FixGroups(ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups, CommandContext Context, 
-            long playerId) {
+        private CheckResult FixGroups(ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups, long playerId) {
 
-            if (!CheckGroups(groups, out MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group, Context, playerId, FactionFixEnabled))
-                return false;
+            var result = CheckGroups(groups, out MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group, playerId, FactionFixEnabled);
 
-            return FixGroup(group, Context);
+            if (result != CheckResult.OK)
+                return result;
+
+            MyIdentity executingPlayer = null;
+
+            if (playerId != 0)
+                executingPlayer = PlayerUtils.GetIdentityById(playerId);
+
+            return FixGroup(group, executingPlayer);
         }
 
-        private bool FixGroup(MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group, CommandContext Context) {
+        private CheckResult FixGroup(MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group group, MyIdentity executingPlayer) {
 
             string playerName = "Server";
 
-            IMyPlayer player = Context.Player;
-            if (player != null)
-                playerName = player.DisplayName;
+            if (executingPlayer != null)
+                playerName = executingPlayer.DisplayName;
 
             List<MyObjectBuilder_EntityBase> objectBuilderList = new List<MyObjectBuilder_EntityBase>();
             List<MyCubeGrid> gridsList = new List<MyCubeGrid>();
@@ -261,8 +250,7 @@ namespace ALE_ShipFixer {
                 MyEntities.Load(objectBuilderList);
             }
 
-            Context.Respond("Ship was fixed!");
-            return true;
+            return CheckResult.SHIP_FIXED;
         }
 
         public static ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> FindLookAtGridGroup(IMyCharacter controlledEntity, long playerId, bool factionFixEnabled) {

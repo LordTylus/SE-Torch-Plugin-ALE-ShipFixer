@@ -1,4 +1,6 @@
 ﻿using ALE_Core;
+using ALE_Core.Cooldown;
+using ALE_Core.Utils;
 using NLog;
 using Sandbox.Game.Entities;
 using System;
@@ -38,17 +40,15 @@ namespace ALE_ShipFixer {
 
         public void FixShipModGridName(string gridName) {
 
-            long playerId = 0L;
+            ulong steamId = PlayerUtils.GetSteamId(Context.Player);
 
-            if (Context.Player != null)
-                playerId = Context.Player.IdentityId;
-
-            if (!CheckConformation(playerId, 0, gridName, null))
+            if (!CheckConformation(steamId, 0, gridName, null))
                 return;
 
             try {
 
-                Plugin.FixShip(gridName, 0, Context);
+                var result = Plugin.FixShip(gridName, 0);
+                WriteResponse(result);
 
             } catch (Exception e) {
                 Log.Error(e, "Error on fixing ship");
@@ -57,32 +57,28 @@ namespace ALE_ShipFixer {
 
         public void FixShipModLookedAt() {
 
-            IMyPlayer player = Context.Player;
-
-            long playerId;
-
-            if (player == null) {
+            if (Context.Player == null) {
 
                 Context.Respond("Console has no Character so cannot use this command. Use !fixshipmod <Gridname> instead!");
                 return;
+            } 
 
-            } else {
-                playerId = player.IdentityId;
-            }
-
-            IMyCharacter character = player.Character;
+            IMyCharacter character = Context.Player.Character;
 
             if (character == null) {
                 Context.Respond("You have no Character currently. Make sure to spawn and be out of cockpit!");
                 return;
             }
 
-            if (!CheckConformation(playerId, 0, "nogrid", character))
+            ulong steamId = PlayerUtils.GetSteamId(Context.Player);
+
+            if (!CheckConformation(steamId, 0, "nogrid", character))
                 return;
 
             try {
 
-                Plugin.FixShip(character, 0, Context);
+                var result = Plugin.FixShip(character, 0);
+                WriteResponse(result);
 
             } catch (Exception e) {
                 Log.Error(e, "Error on fixing ship");
@@ -128,34 +124,28 @@ namespace ALE_ShipFixer {
                 playerId = player.IdentityId;
             }
 
-            var currentCooldownMap = Plugin.CurrentCooldownMap;
+            CooldownManager cooldownManager = Plugin.CommandCooldownManager;
 
-            if (currentCooldownMap.TryGetValue(playerId, out CurrentCooldown currentCooldown)) {
+            ulong steamId = PlayerUtils.GetSteamId(Context.Player);
 
-                long remainingSeconds = currentCooldown.GetRemainingSeconds(null);
-
-                if (remainingSeconds > 0) {
-                    Log.Info("Cooldown for Player " + player.DisplayName + " still running! " + remainingSeconds + " seconds remaining!");
-                    Context.Respond("Command is still on cooldown for " + remainingSeconds + " seconds.");
-                    return;
-                }
-
-                currentCooldown = CreateNewCooldown(currentCooldownMap, playerId, Plugin.Cooldown);
-
-            } else {
-
-                currentCooldown = CreateNewCooldown(currentCooldownMap, playerId, Plugin.Cooldown);
+            if(!cooldownManager.CheckCooldown(steamId, null, out long remainingSeconds)) {
+                Log.Info("Cooldown for Player " + player.DisplayName + " still running! " + remainingSeconds + " seconds remaining!");
+                Context.Respond("Command is still on cooldown for " + remainingSeconds + " seconds.");
+                return;
             }
 
-            if (!CheckConformation(playerId, playerId, gridName, null))
+            if (!CheckConformation(steamId, playerId, gridName, null))
                 return;
 
             try {
 
-                if (Plugin.FixShip(gridName, playerId, Context)) {
+                var result = Plugin.FixShip(gridName, playerId);
+                WriteResponse(result);
+
+                if (result == CheckResult.SHIP_FIXED) {
 
                     Log.Info("Cooldown for Player " + player.DisplayName + " started!");
-                    currentCooldown.StartCooldown(null);
+                    cooldownManager.StartCooldown(steamId, null, Plugin.Cooldown);
                 }
 
             } catch (Exception e) {
@@ -185,34 +175,28 @@ namespace ALE_ShipFixer {
                 return;
             }
 
-            var currentCooldownMap = Plugin.CurrentCooldownMap;
+            CooldownManager cooldownManager = Plugin.CommandCooldownManager;
 
-            if (currentCooldownMap.TryGetValue(playerId, out CurrentCooldown currentCooldown)) {
+            ulong steamId = PlayerUtils.GetSteamId(Context.Player);
 
-                long remainingSeconds = currentCooldown.GetRemainingSeconds(null);
-
-                if (remainingSeconds > 0) {
-                    Log.Info("Cooldown for Player " + player.DisplayName + " still running! " + remainingSeconds + " seconds remaining!");
-                    Context.Respond("Command is still on cooldown for " + remainingSeconds + " seconds.");
-                    return;
-                }
-
-                currentCooldown = CreateNewCooldown(currentCooldownMap, playerId, Plugin.Cooldown);
-
-            } else {
-
-                currentCooldown = CreateNewCooldown(currentCooldownMap, playerId, Plugin.Cooldown);
+            if (!cooldownManager.CheckCooldown(steamId, null, out long remainingSeconds)) {
+                Log.Info("Cooldown for Player " + player.DisplayName + " still running! " + remainingSeconds + " seconds remaining!");
+                Context.Respond("Command is still on cooldown for " + remainingSeconds + " seconds.");
+                return;
             }
 
-            if (!CheckConformation(playerId, playerId, "nogrid", character))
+            if (!CheckConformation(steamId, playerId, "nogrid", character))
                 return;
 
             try {
 
-                if (Plugin.FixShip(character, playerId, Context)) {
+                var result = Plugin.FixShip(character, playerId);
+                WriteResponse(result);
+
+                if (result == CheckResult.SHIP_FIXED) {
 
                     Log.Info("Cooldown for Player " + player.DisplayName + " started!");
-                    currentCooldown.StartCooldown(null);
+                    cooldownManager.StartCooldown(steamId, null, Plugin.Cooldown);
                 }
 
             } catch (Exception e) {
@@ -220,27 +204,19 @@ namespace ALE_ShipFixer {
             }
         }
 
-        private bool CheckConformation(long executingPlayerId, long playerId, string gridName, IMyCharacter character) {
+        private bool CheckConformation(ulong steamId, long playerId, string gridName, IMyCharacter character) {
 
-            var confirmationCooldownMap = Plugin.ConfirmationsMap;
-
-            if (confirmationCooldownMap.TryGetValue(executingPlayerId, out CurrentCooldown confirmationCooldown)) {
-
-                long remainingSeconds = confirmationCooldown.GetRemainingSeconds(gridName);
-
-                if (remainingSeconds > 0) {
-                    confirmationCooldownMap.Remove(executingPlayerId);
-                    return true;
-                }
+            var cooldownManager = Plugin.ConfirmationCooldownManager;
+            if (!cooldownManager.CheckCooldown(steamId, gridName, out _)) {
+                cooldownManager.StopCooldown(steamId);
+                return true;
             }
-             
+
             if (!CheckGridFound(playerId, gridName, character))
                 return false;
 
-            confirmationCooldown = CreateNewCooldown(confirmationCooldownMap, executingPlayerId, Plugin.CooldownConfirmation);
-
             Context.Respond("Are you sure you want to continue? Enter the command again within " + Plugin.CooldownConfirmationSeconds + " seconds to confirm.");
-            confirmationCooldown.StartCooldown(gridName);
+            cooldownManager.StartCooldown(steamId, gridName, Plugin.Cooldown);
 
             return false;
         }
@@ -254,22 +230,48 @@ namespace ALE_ShipFixer {
             else
                 groups = ShipFixerPlugin.FindLookAtGridGroup(character, playerId, Plugin.FactionFixEnabled);
 
-            if (!ShipFixerPlugin.CheckGroups(groups, out _, Context, playerId, Plugin.FactionFixEnabled))
+            CheckResult result = ShipFixerPlugin.CheckGroups(groups, out _, playerId, Plugin.FactionFixEnabled);
+
+            if (result != CheckResult.OK) {
+                WriteResponse(result);
                 return false;
+            }
 
             return true;
         }
 
-        private static CurrentCooldown CreateNewCooldown(Dictionary<long, CurrentCooldown> cooldownMap, long playerId, long cooldown) {
+        private void WriteResponse(CheckResult result) {
 
-            var currentCooldown = new CurrentCooldown(cooldown);
+            switch(result) {
 
-            if (cooldownMap.ContainsKey(playerId))
-                cooldownMap[playerId] = currentCooldown;
-            else
-                cooldownMap.Add(playerId, currentCooldown);
+                case CheckResult.TOO_FEW_GRIDS:
+                    Context.Respond("Could not find your Grid. Check if ownership is correct");
+                    break;
 
-            return currentCooldown;
+                case CheckResult.TOO_MANY_GRIDS:
+                    Context.Respond("Found multiple Grids with same Name. Rename your grid first to something unique.");
+                    break;
+
+                case CheckResult.UNKNOWN_PROBLEM:
+                    Context.Respond("Could not work with found grid for unknown reason.");
+                    break;
+
+                case CheckResult.OWNED_BY_DIFFERENT_PLAYER:
+                    Context.Respond("Grid seems to be owned by a different player.");
+                    break;
+
+                case CheckResult.DIFFERENT_OWNER_ON_CONNECTED_GRID:
+                    Context.Respond("One of the connected grids is owned by a different player.");
+                    break;
+
+                case CheckResult.GRID_OCCUPIED:
+                    Context.Respond("Cockpits or seats are still occupied! Clear them first and try again. Dont forget to check the toilet!");
+                    break;
+
+                case CheckResult.SHIP_FIXED:
+                    Context.Respond("Ship was fixed!");
+                    break;
+            }
         }
     }
 }
