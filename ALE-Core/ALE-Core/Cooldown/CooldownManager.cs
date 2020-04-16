@@ -6,13 +6,13 @@ namespace ALE_Core.Cooldown {
 
     public class CooldownManager {
 
-        private readonly Dictionary<ulong, CurrentCooldown> cooldownMap = new Dictionary<ulong, CurrentCooldown>();
+        private readonly Dictionary<ICooldownKey, CurrentCooldown> cooldownMap = new Dictionary<ICooldownKey, CurrentCooldown>();
 
-        public bool CheckCooldown(ulong steamId, string command, out long remainingSeconds) {
+        public bool CheckCooldown(ICooldownKey key, string command, out long remainingSeconds) {
 
             remainingSeconds = 0;
 
-            if (cooldownMap.TryGetValue(steamId, out CurrentCooldown currentCooldown)) {
+            if (cooldownMap.TryGetValue(key, out CurrentCooldown currentCooldown)) {
 
                 remainingSeconds = currentCooldown.GetRemainingSeconds(command);
 
@@ -23,22 +23,22 @@ namespace ALE_Core.Cooldown {
             return true;
         }
 
-        public void StartCooldown(ulong steamId, string command, long cooldown) {
+        public void StartCooldown(ICooldownKey key, string command, long cooldown) {
 
             var currentCooldown = new CurrentCooldown(cooldown);
 
-            if (cooldownMap.ContainsKey(steamId))
-                cooldownMap[steamId] = currentCooldown;
+            if (cooldownMap.ContainsKey(key))
+                cooldownMap[key] = currentCooldown;
             else
-                cooldownMap.Add(steamId, currentCooldown);
+                cooldownMap.Add(key, currentCooldown);
 
             currentCooldown.StartCooldown(command);
         }
 
-        public void StopCooldown(ulong steamId) {
+        public void StopCooldown(ICooldownKey key) {
 
-            if (cooldownMap.ContainsKey(steamId))
-                cooldownMap.Remove(steamId);
+            if (cooldownMap.ContainsKey(key))
+                cooldownMap.Remove(key);
         }
     }
 }

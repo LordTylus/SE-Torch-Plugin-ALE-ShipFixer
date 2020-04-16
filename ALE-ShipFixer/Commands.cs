@@ -40,7 +40,7 @@ namespace ALE_ShipFixer {
 
         public void FixShipModGridName(string gridName) {
 
-            ulong steamId = PlayerUtils.GetSteamId(Context.Player);
+            var steamId = new SteamIdCooldownKey(PlayerUtils.GetSteamId(Context.Player));
 
             if (!CheckConformation(steamId, 0, gridName, null))
                 return;
@@ -70,7 +70,7 @@ namespace ALE_ShipFixer {
                 return;
             }
 
-            ulong steamId = PlayerUtils.GetSteamId(Context.Player);
+            var steamId = new SteamIdCooldownKey(PlayerUtils.GetSteamId(Context.Player));
 
             if (!CheckConformation(steamId, 0, "nogrid", character))
                 return;
@@ -126,7 +126,7 @@ namespace ALE_ShipFixer {
 
             CooldownManager cooldownManager = Plugin.CommandCooldownManager;
 
-            ulong steamId = PlayerUtils.GetSteamId(Context.Player);
+            var steamId = new SteamIdCooldownKey(PlayerUtils.GetSteamId(Context.Player));
 
             if(!cooldownManager.CheckCooldown(steamId, null, out long remainingSeconds)) {
                 Log.Info("Cooldown for Player " + player.DisplayName + " still running! " + remainingSeconds + " seconds remaining!");
@@ -177,7 +177,7 @@ namespace ALE_ShipFixer {
 
             CooldownManager cooldownManager = Plugin.CommandCooldownManager;
 
-            ulong steamId = PlayerUtils.GetSteamId(Context.Player);
+            var steamId = new SteamIdCooldownKey(PlayerUtils.GetSteamId(Context.Player));
 
             if (!cooldownManager.CheckCooldown(steamId, null, out long remainingSeconds)) {
                 Log.Info("Cooldown for Player " + player.DisplayName + " still running! " + remainingSeconds + " seconds remaining!");
@@ -204,11 +204,11 @@ namespace ALE_ShipFixer {
             }
         }
 
-        private bool CheckConformation(ulong steamId, long playerId, string gridName, IMyCharacter character) {
+        private bool CheckConformation(ICooldownKey cooldownKey, long playerId, string gridName, IMyCharacter character) {
 
             var cooldownManager = Plugin.ConfirmationCooldownManager;
-            if (!cooldownManager.CheckCooldown(steamId, gridName, out _)) {
-                cooldownManager.StopCooldown(steamId);
+            if (!cooldownManager.CheckCooldown(cooldownKey, gridName, out _)) {
+                cooldownManager.StopCooldown(cooldownKey);
                 return true;
             }
 
@@ -216,7 +216,7 @@ namespace ALE_ShipFixer {
                 return false;
 
             Context.Respond("Are you sure you want to continue? Enter the command again within " + Plugin.CooldownConfirmationSeconds + " seconds to confirm.");
-            cooldownManager.StartCooldown(steamId, gridName, Plugin.Cooldown);
+            cooldownManager.StartCooldown(cooldownKey, gridName, Plugin.Cooldown);
 
             return false;
         }
