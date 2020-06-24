@@ -247,7 +247,7 @@ namespace ALE_ShipFixer {
 
             } else {
 
-                MyEntities.Load(objectBuilderList);
+                MyEntities.Load(objectBuilderList, out _);
             }
 
             return CheckResult.SHIP_FIXED;
