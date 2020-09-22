@@ -215,7 +215,7 @@ namespace ALE_ShipFixer {
             if (!CheckGridFound(playerId, gridName, character))
                 return false;
 
-            Context.Respond("Are you sure you want to continue? Enter the command again within " + Plugin.CooldownConfirmationSeconds + " seconds to confirm.");
+            Context.Respond("Are you sure you want to continue? Enter the command again within " + Plugin.CooldownConfirmationSeconds + " seconds to confirm fixship on " + gridName + ".");
             cooldownManager.StartCooldown(cooldownKey, gridName, Plugin.Cooldown);
 
             return false;
