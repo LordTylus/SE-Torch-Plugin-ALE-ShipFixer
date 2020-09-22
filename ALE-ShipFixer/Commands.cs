@@ -212,16 +212,20 @@ namespace ALE_ShipFixer {
                 return true;
             }
 
-            if (!CheckGridFound(playerId, gridName, character))
+            if (!CheckGridFound(playerId, gridName, character, out MyCubeGrid grid))
                 return false;
 
-            Context.Respond("Are you sure you want to continue? Enter the command again within " + Plugin.CooldownConfirmationSeconds + " seconds to confirm fixship on " + gridName + ".");
+            if(grid != null)
+                Context.Respond("Are you sure you want to continue? Enter the command again within " + Plugin.CooldownConfirmationSeconds + " seconds to confirm fixship on " + grid.DisplayName + ".");
+            else
+                Context.Respond("Are you sure you want to continue? Enter the command again within " + Plugin.CooldownConfirmationSeconds + " seconds.");
+
             cooldownManager.StartCooldown(cooldownKey, gridName, Plugin.Cooldown);
 
             return false;
         }
 
-        private bool CheckGridFound(long playerId, string gridName, IMyCharacter character) {
+        private bool CheckGridFound(long playerId, string gridName, IMyCharacter character, out MyCubeGrid grid) {
 
             ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups;
 
@@ -232,10 +236,26 @@ namespace ALE_ShipFixer {
 
             CheckResult result = ShipFixerPlugin.CheckGroups(groups, out _, playerId, Plugin.FactionFixEnabled);
 
+            grid = null;
+
             if (result != CheckResult.OK) {
+                
                 WriteResponse(result);
+
                 return false;
             }
+
+            List<MyCubeGrid> grids = new List<MyCubeGrid>();
+
+            foreach(var group in groups) {
+
+                foreach (var node in group.Nodes)
+                    grids.Add(node.NodeData);
+
+                break;
+            }
+
+            grid = GridUtils.GetBiggestGridInGroup(grids);
 
             return true;
         }
