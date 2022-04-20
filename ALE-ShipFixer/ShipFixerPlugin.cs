@@ -24,6 +24,7 @@ using ALE_Core.Utils;
 using Sandbox.Common.ObjectBuilders;
 using ALE_Core.Cooldown;
 using Sandbox.Game.World;
+using ALE_ShipFixer.ALE_ShipFixer;
 
 namespace ALE_ShipFixer {
 
@@ -198,13 +199,14 @@ namespace ALE_ShipFixer {
 
             List<MyObjectBuilder_EntityBase> objectBuilderList = new List<MyObjectBuilder_EntityBase>();
             List<MyCubeGrid> gridsList = new List<MyCubeGrid>();
+            SpawnCounter.SpawnCallback counter = null;
 
             foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
 
                 MyCubeGrid grid = groupNodes.NodeData;
                 gridsList.Add(grid);
 
-                grid.Physics.LinearVelocity = Vector3.Zero;
+                grid.Physics.ClearSpeed();
 
                 MyObjectBuilder_EntityBase ob = grid.GetObjectBuilder(true);
 
@@ -238,16 +240,11 @@ namespace ALE_ShipFixer {
 
             MyAPIGateway.Entities.RemapObjectBuilderCollection(objectBuilderList);
 
-            bool hasMultipleGrids = objectBuilderList.Count > 1;
+            counter = new SpawnCounter.SpawnCallback(objectBuilderList.Count);
 
-            if (!hasMultipleGrids) {
-
-                foreach (var ob in objectBuilderList)
-                    MyEntities.CreateFromObjectBuilderParallel(ob, true);
-
-            } else {
-
-                MyEntities.Load(objectBuilderList, out _);
+            foreach (var ObGrid in objectBuilderList)
+            {
+                MyAPIGateway.Entities.CreateFromObjectBuilderParallel(ObGrid, false, counter.Increment);
             }
 
             return CheckResult.SHIP_FIXED;
