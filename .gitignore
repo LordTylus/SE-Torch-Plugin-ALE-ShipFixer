@@ -7,3 +7,7 @@ obj/
 .svn/
 .git/
 .vs/
+
+GameBinaries
+
+TorchBinaries
