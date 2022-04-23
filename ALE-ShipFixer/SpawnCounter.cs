@@ -3,14 +3,14 @@ using Sandbox.ModAPI;
 using System.Collections.Generic;
 using VRage.ModAPI;
 
-namespace ALE_ShipFixer.ALE_ShipFixer
+namespace ALE_ShipFixer
 {
     public static class SpawnCounter
     {
         public class SpawnCallback
         {
             private int _counter;
-            private List<IMyEntity> _entlist;
+            private readonly List<IMyEntity> _entlist;
             private readonly int _maxCount;
 
             public SpawnCallback(int count)

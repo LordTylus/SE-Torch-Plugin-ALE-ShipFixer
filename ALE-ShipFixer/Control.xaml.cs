@@ -13,22 +13,27 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace ALE_ShipFixer {
+namespace ALE_ShipFixer
+{
 
-    public partial class Control : UserControl {
+    public partial class Control : UserControl
+    {
 
         private ShipFixerPlugin Plugin { get; }
 
-        public Control() {
+        public Control()
+        {
             InitializeComponent();
         }
 
-        public Control(ShipFixerPlugin plugin) : this() {
+        public Control(ShipFixerPlugin plugin) : this()
+        {
             Plugin = plugin;
             DataContext = plugin.Config;
         }
 
-        private void SaveButton_OnClick(object sender, RoutedEventArgs e) {
+        private void SaveButton_OnClick(object sender, RoutedEventArgs e)
+        {
             Plugin.Save();
         }
     }
