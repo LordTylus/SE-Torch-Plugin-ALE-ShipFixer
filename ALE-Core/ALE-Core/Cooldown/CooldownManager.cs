@@ -2,17 +2,21 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace ALE_Core.Cooldown {
+namespace ALE_Core.Cooldown
+{
 
-    public class CooldownManager {
+    public class CooldownManager
+    {
 
         private readonly Dictionary<ICooldownKey, CurrentCooldown> cooldownMap = new Dictionary<ICooldownKey, CurrentCooldown>();
 
-        public bool CheckCooldown(ICooldownKey key, string command, out long remainingSeconds) {
+        public bool CheckCooldown(ICooldownKey key, string command, out long remainingSeconds)
+        {
 
             remainingSeconds = 0;
 
-            if (cooldownMap.TryGetValue(key, out CurrentCooldown currentCooldown)) {
+            if (cooldownMap.TryGetValue(key, out CurrentCooldown currentCooldown))
+            {
 
                 remainingSeconds = currentCooldown.GetRemainingSeconds(command);
 
@@ -23,7 +27,8 @@ namespace ALE_Core.Cooldown {
             return true;
         }
 
-        public void StartCooldown(ICooldownKey key, string command, long cooldown) {
+        public void StartCooldown(ICooldownKey key, string command, long cooldown)
+        {
 
             var currentCooldown = new CurrentCooldown(cooldown);
 
@@ -35,7 +40,8 @@ namespace ALE_Core.Cooldown {
             currentCooldown.StartCooldown(command);
         }
 
-        public void StopCooldown(ICooldownKey key) {
+        public void StopCooldown(ICooldownKey key)
+        {
 
             if (cooldownMap.ContainsKey(key))
                 cooldownMap.Remove(key);
