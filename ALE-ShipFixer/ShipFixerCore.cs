@@ -1,20 +1,20 @@
-﻿using NLog;
+﻿using ALE_Core.Utils;
+using NLog;
+using Sandbox.Common.ObjectBuilders;
 using Sandbox.Game.Entities;
+using Sandbox.Game.Entities.Blocks;
+using Sandbox.Game.World;
 using Sandbox.ModAPI;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using VRage.Game;
+using VRage.Game.ModAPI;
 using VRage.Groups;
 using VRage.ObjectBuilders;
 using VRageMath;
 using IMyShipController = Sandbox.ModAPI.IMyShipController;
 using IMyTerminalBlock = Sandbox.ModAPI.Ingame.IMyTerminalBlock;
-using VRage.Game.ModAPI;
-using System.Collections.Generic;
-using System.Linq;
-using VRage.Game;
-using System.Threading.Tasks;
-using ALE_Core.Utils;
-using Sandbox.Common.ObjectBuilders;
-using Sandbox.Game.World;
-using Sandbox.Game.Entities.Blocks;
 
 namespace ALE_ShipFixer {
     public class ShipFixerCore {
@@ -323,9 +323,9 @@ namespace ALE_ShipFixer {
                 GridsGroup.Add((MyCubeGrid)Mygrid);
             
             // sort the list. largest to smallest
-            GridsGroup.SortNoAlloc((x, y) => x.BlocksCount.CompareTo(y.BlocksCount));
+            GridsGroup.SortNoAlloc((grid1, grid2) => grid1.BlocksCount.CompareTo(grid2.BlocksCount));
             GridsGroup.Reverse();
-            GridsGroup.SortNoAlloc((x, y) => x.GridSizeEnum.CompareTo(y.GridSizeEnum));
+            GridsGroup.SortNoAlloc((grid1, grid2) => grid1.GridSizeEnum.CompareTo(grid2.GridSizeEnum));
 
             return GridsGroup;
         }
