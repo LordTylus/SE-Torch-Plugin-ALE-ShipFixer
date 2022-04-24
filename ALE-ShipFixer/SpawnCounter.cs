@@ -14,12 +14,14 @@ namespace ALE_ShipFixer {
             private readonly int _maxCount;
 
             public SpawnCallback(int count) {
+                
                 _counter = 0;
                 _entlist = new List<IMyEntity>();
                 _maxCount = count;
             }
 
             public void Increment(IMyEntity ent) {
+                
                 _counter++;
                 _entlist.Add(ent);
 
@@ -30,6 +32,7 @@ namespace ALE_ShipFixer {
             }
 
             private static void FinalSpawnCallback(List<IMyEntity> grids) {
+
                 foreach (MyCubeGrid ent in grids) {
                     ent.DetectDisconnectsAfterFrame();
                     MyAPIGateway.Entities.AddEntity(ent, true);
