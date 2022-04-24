@@ -214,6 +214,11 @@ namespace ALE_ShipFixer {
             else
                 GridGroups = ShipFixerCore.FindLookAtGridGroup(character, playerId, Plugin.FactionFixEnabled);
 
+            if (GridGroups == null || GridGroups.Count == 0) {
+                WriteResponse(CheckResult.GRID_NOT_FOUND);
+                return false;
+            }
+
             CheckResult result = ShipFixerCore.CheckGroups(GridGroups, out _, playerId, Plugin.FactionFixEnabled);
 
             if (result != CheckResult.OK) {
@@ -261,6 +266,10 @@ namespace ALE_ShipFixer {
 
                 case CheckResult.SHIP_FIXED:
                     Context.Respond("Ship was fixed!");
+                    break;
+
+                case CheckResult.GRID_NOT_FOUND:
+                    Context.Respond("Grid not found");
                     break;
             }
         }

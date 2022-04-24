@@ -1,4 +1,4 @@
-﻿using ALE_Core.Utils;
+using ALE_Core.Utils;
 using NLog;
 using Sandbox.Common.ObjectBuilders;
 using Sandbox.Game.Entities;
@@ -312,20 +312,23 @@ namespace ALE_ShipFixer {
                 }
             });
 
-            // only here we can see attached by landing gear grids to main grid!
-            var IMygrids = new List<IMyCubeGrid>();
-            MyAPIGateway.GridGroups.GetGroup(GridsGroup.FirstOrDefault(), GridLinkTypeEnum.Physical, IMygrids);
+            if (GridsGroup.Count > 0) {
 
-            GridsGroup.Clear();
+                // only here we can see attached by landing gear grids to main grid!
+                var IMygrids = new List<IMyCubeGrid>();
+                MyAPIGateway.GridGroups.GetGroup(GridsGroup.FirstOrDefault(), GridLinkTypeEnum.Physical, IMygrids);
 
-            // convert back to MyCubeGrid
-            foreach (var Mygrid in IMygrids) 
-                GridsGroup.Add((MyCubeGrid)Mygrid);
-            
-            // sort the list. largest to smallest
-            GridsGroup.SortNoAlloc((grid1, grid2) => grid1.BlocksCount.CompareTo(grid2.BlocksCount));
-            GridsGroup.Reverse();
-            GridsGroup.SortNoAlloc((grid1, grid2) => grid1.GridSizeEnum.CompareTo(grid2.GridSizeEnum));
+                GridsGroup.Clear();
+
+                // convert back to MyCubeGrid
+                foreach (var Mygrid in IMygrids)
+                    GridsGroup.Add((MyCubeGrid)Mygrid);
+
+                // sort the list. largest to smallest
+                GridsGroup.SortNoAlloc((grid1, grid2) => grid1.BlocksCount.CompareTo(grid2.BlocksCount));
+                GridsGroup.Reverse();
+                GridsGroup.SortNoAlloc((grid1, grid2) => grid1.GridSizeEnum.CompareTo(grid2.GridSizeEnum));
+            }
 
             return GridsGroup;
         }
