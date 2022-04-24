@@ -7,10 +7,9 @@ using Torch.API.Plugins;
 using System.Windows.Controls;
 using ALE_Core.Cooldown;
 
-namespace ALE_ShipFixer
-{
-    public class ShipFixerPlugin : TorchPluginBase, IWpfPlugin
-    {
+namespace ALE_ShipFixer {
+    public class ShipFixerPlugin : TorchPluginBase, IWpfPlugin {
+
         public static readonly Logger Log = LogManager.GetCurrentClassLogger();
         public static ShipFixerPlugin Instance;
         private Control _control;
@@ -27,24 +26,20 @@ namespace ALE_ShipFixer
         public bool FactionFixEnabled { get { return Config.FixShipFactionEnabled; } }
 
         /// <inheritdoc />
-        public override void Init(ITorchBase torch)
-        {
+        public override void Init(ITorchBase torch) {
+
             base.Init(torch);
             Instance = this;
 
             var configFile = Path.Combine(StoragePath, "ShipFixer.cfg");
 
-            try
-            {
+            try {
                 _config = Persistent<ShipFixerConfig>.Load(configFile);
-            }
-            catch (Exception e)
-            {
+            } catch (Exception e) {
                 Log.Warn(e);
             }
 
-            if (_config?.Data == null)
-            {
+            if (_config?.Data == null) {
                 Log.Info("Create Default Config, because none was found!");
 
                 _config = new Persistent<ShipFixerConfig>(configFile, new ShipFixerConfig());
@@ -54,15 +49,15 @@ namespace ALE_ShipFixer
             ShipFixerCore.Init();
         }
 
-        public void Save()
-        {
-            try
-            {
+        public void Save() {
+
+            try {
+
                 _config.Save();
+
                 Log.Info("Configuration Saved.");
-            }
-            catch (IOException)
-            {
+
+            } catch (IOException) {
                 Log.Warn("Configuration failed to save");
             }
         }

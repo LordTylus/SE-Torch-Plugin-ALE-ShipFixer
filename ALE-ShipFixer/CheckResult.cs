@@ -1,7 +1,5 @@
-﻿namespace ALE_ShipFixer
-{
-    public enum CheckResult
-    {
+﻿namespace ALE_ShipFixer {
+    public enum CheckResult {
         OK,
         TOO_FEW_GRIDS,
         TOO_MANY_GRIDS,
