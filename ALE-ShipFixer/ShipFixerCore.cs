@@ -123,15 +123,9 @@ namespace ALE_ShipFixer {
                                     // Eject only after confirmation
                                     if (EjectPlayers)
                                     {
-                                        if (controller.Pilot != null && controller is MyCockpit cockpit)
+                                        if (controller.Pilot != null && controller is MyShipController ShipController)
                                         {
-                                            cockpit.RemovePilot();
-                                            PlayerRemoved = true;
-                                        }
-
-                                        if (controller.Pilot != null && controller is MyCryoChamber CryoChamber)
-                                        {
-                                            CryoChamber.RemovePilot();
+                                            ShipController.Use();
                                             PlayerRemoved = true;
                                         }
                                     }
