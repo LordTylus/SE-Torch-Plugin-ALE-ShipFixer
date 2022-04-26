@@ -44,7 +44,7 @@ namespace ALE_ShipFixer {
 
             try {
 
-                var result = ShipFixerCore.Instance.FixShip(gridName, 0);
+                var result = ShipFixerCore.Instance.FixShip(0, gridName);
                 WriteResponse(result);
 
             } catch (Exception e) {
@@ -135,7 +135,7 @@ namespace ALE_ShipFixer {
 
             try {
 
-                var result = ShipFixerCore.Instance.FixShip(gridName, playerId);
+                var result = ShipFixerCore.Instance.FixShip(playerId, gridName);
                 WriteResponse(result);
 
                 if (result == CheckResult.SHIP_FIXED) {
@@ -208,31 +208,30 @@ namespace ALE_ShipFixer {
             }
 
             List<MyCubeGrid> GridGroups;
+            CheckResult SearchResult;
 
             if (character == null)
-                GridGroups = ShipFixerCore.FindGridGroupsForPlayer(gridName, playerId, Plugin.FactionFixEnabled);
+                GridGroups = ShipFixerCore.FindGridGroupsForPlayer(gridName, playerId, Plugin.FactionFixEnabled, out SearchResult);
             else
-                GridGroups = ShipFixerCore.FindLookAtGridGroup(character, playerId, Plugin.FactionFixEnabled);
+                GridGroups = ShipFixerCore.FindLookAtGridGroup(character, playerId, Plugin.FactionFixEnabled, out SearchResult);
 
-            if (GridGroups == null || GridGroups.Count == 0) {
-                WriteResponse(CheckResult.GRID_NOT_FOUND);
+            if (GridGroups == null || GridGroups.Count == 0 || SearchResult != CheckResult.OK) {
+                WriteResponse(SearchResult);
                 return false;
             }
 
-            CheckResult result = ShipFixerCore.CheckGroups(GridGroups, out _, playerId, Plugin.FactionFixEnabled);
+            var EjectPlayers = false;
+            CheckResult result = ShipFixerCore.CheckGroups(GridGroups, out _, playerId, Plugin.FactionFixEnabled, EjectPlayers);
 
             if (result != CheckResult.OK) {
                 WriteResponse(result);
                 return false;
             }
 
-            if (GridGroups?.Count > 0)
-                Context.Respond("Are you sure you want to continue? Enter the command again within " + Plugin.CooldownConfirmationSeconds + " seconds to confirm fixship on " + GridGroups[0].DisplayName + ".");
-            else
-                Context.Respond("Are you sure you want to continue? Enter the command again within " + Plugin.CooldownConfirmationSeconds + " seconds.");
+            cooldownManager.StartCooldown(cooldownKey, gridName, Plugin.CooldownConfirmation);
 
-            cooldownManager.StartCooldown(cooldownKey, gridName, Plugin.Cooldown);
-
+            Context.Respond("Are you sure you want to continue? Enter the command again within " + Plugin.CooldownConfirmationSeconds + " seconds to confirm fixship on " + GridGroups[0].DisplayName + ".");
+            
             return false;
         }
 
@@ -241,7 +240,7 @@ namespace ALE_ShipFixer {
             switch (result) {
 
                 case CheckResult.TOO_FEW_GRIDS:
-                    Context.Respond("Could not find your Grid. Check if ownership is correct");
+                    Context.Respond("Could not find your Grid, Or Check if ownership is correct");
                     break;
 
                 case CheckResult.TOO_MANY_GRIDS:

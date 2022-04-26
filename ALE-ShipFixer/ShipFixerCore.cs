@@ -28,25 +28,19 @@ namespace ALE_ShipFixer {
 
         public CheckResult FixShip(IMyCharacter character, long playerId) {
 
-            var groups = FindLookAtGridGroup(character, playerId, ShipFixerPlugin.Instance.FactionFixEnabled);
+            var groups = FindLookAtGridGroup(character, playerId, ShipFixerPlugin.Instance.FactionFixEnabled, out CheckResult SearchResult);
 
             return FixGroups(groups, playerId);
         }
 
-        public CheckResult FixShip(string gridName, long playerId) {
+        public CheckResult FixShip(long playerId, string gridName) {
 
-            var groups = FindGridGroupsForPlayer(gridName, playerId, ShipFixerPlugin.Instance.FactionFixEnabled);
+            var groups = FindGridGroupsForPlayer(gridName, playerId, ShipFixerPlugin.Instance.FactionFixEnabled, out CheckResult SearchResult);
 
             return FixGroups(groups, playerId);
         }
 
-        public static CheckResult CheckGroups(List<MyCubeGrid> groups, out List<MyCubeGrid> group, long playerId, bool factionFixEnabled) {
-
-            /* No group or too many groups found */
-            if (groups.Count < 1) {
-                group = null;
-                return CheckResult.TOO_FEW_GRIDS;
-            }
+        public static CheckResult CheckGroups(List<MyCubeGrid> groups, out List<MyCubeGrid> group, long playerId, bool factionFixEnabled, bool EjectPlayers = true) {
 
             group = groups;
 
@@ -89,7 +83,6 @@ namespace ALE_ShipFixer {
             }
 
             Dictionary<long, MyPlayer> dictionary = new Dictionary<long, MyPlayer>();
-            var PlayerRemoved = false;
 
             if (MySession.Static.Players.GetOnlinePlayers().Count > 0)
                 dictionary = MySession.Static.Players.GetOnlinePlayers().ToDictionary((MyPlayer b) => b.Identity.IdentityId);
@@ -118,23 +111,37 @@ namespace ALE_ShipFixer {
                         /* Check if controlling player is online, if not we can fixship */
                         if (PlayerInControl != null && dictionary.ContainsKey((long)PlayerInControl)) {
 
+                            var PlayerRemoved = false;
+                            var WaitSecondConfirmation = false;
+
                             if (GridOwnerFaction != null && ControllingPlayerFaction != null) {
 
                                 var FactionsRelationship = MySession.Static.Factions.GetRelationBetweenFactions(GridOwnerFaction.FactionId, ControllingPlayerFaction.FactionId);
 
                                 if (GridOwnerFaction.FactionId == ControllingPlayerFaction.FactionId || FactionsRelationship.Item1 != MyRelationsBetweenFactions.Enemies) {
 
-                                    if (controller.Pilot != null && controller is MyCockpit cockpit) {
-                                        cockpit.RemovePilot();
-                                        PlayerRemoved = true;
-                                    }
+                                    // Eject only after confirmation
+                                    if (EjectPlayers)
+                                    {
+                                        if (controller.Pilot != null && controller is MyCockpit cockpit)
+                                        {
+                                            cockpit.RemovePilot();
+                                            PlayerRemoved = true;
+                                        }
 
-                                    if (controller.Pilot != null && controller is MyCryoChamber CryoChamber) {
-                                        CryoChamber.RemovePilot();
-                                        PlayerRemoved = true;
+                                        if (controller.Pilot != null && controller is MyCryoChamber CryoChamber)
+                                        {
+                                            CryoChamber.RemovePilot();
+                                            PlayerRemoved = true;
+                                        }
                                     }
+                                    else
+                                        WaitSecondConfirmation = true;
                                 }
                             }
+
+                            if (WaitSecondConfirmation)
+                                return CheckResult.OK;
 
                             if (!PlayerRemoved)
                                 return CheckResult.GRID_OCCUPIED;
@@ -147,6 +154,9 @@ namespace ALE_ShipFixer {
         }
 
         private CheckResult FixGroups(List<MyCubeGrid> groups, long playerId) {
+
+            if (groups.Count == 0)
+                return CheckResult.GRID_NOT_FOUND;
 
             var result = CheckGroups(groups, out List<MyCubeGrid> group, playerId, ShipFixerPlugin.Instance.FactionFixEnabled);
 
@@ -182,9 +192,13 @@ namespace ALE_ShipFixer {
                     if (ob is MyObjectBuilder_CubeGrid gridBuilder) {
                         foreach (MyObjectBuilder_CubeBlock cubeBlock in gridBuilder.CubeBlocks) {
 
-                            if (ShipFixerPlugin.Instance.Config.RemoveBlueprintsFromProjectors)
-                                if (cubeBlock is MyObjectBuilder_ProjectorBase projector)
+                            if (cubeBlock is MyObjectBuilder_ProjectorBase projector) {
+                                
+                                projector.Enabled = false;
+
+                                if (ShipFixerPlugin.Instance.Config.RemoveBlueprintsFromProjectors)
                                     projector.ProjectedGrids = null;
+                            }
 
                             if (cubeBlock is MyObjectBuilder_OxygenTank o2Tank)
                                 o2Tank.AutoRefill = false;
@@ -212,12 +226,23 @@ namespace ALE_ShipFixer {
             return CheckResult.SHIP_FIXED;
         }
 
-        public static List<MyCubeGrid> FindLookAtGridGroup(IMyCharacter controlledEntity, long playerId, bool factionFixEnabled) {
+        public static List<MyCubeGrid> FindLookAtGridGroup(IMyCharacter controlledEntity, long playerId, bool factionFixEnabled, out CheckResult result) {
 
             const float range = 5000;
             Matrix worldMatrix;
             Vector3D startPosition;
             Vector3D endPosition;
+
+            var GridsGroup = new List<MyCubeGrid>();
+            var charlocation = controlledEntity.PositionComp.GetPosition();
+            var sphere = new BoundingSphereD(charlocation, range);
+            var entList = MyAPIGateway.Entities.GetTopMostEntitiesInSphere(ref sphere);
+
+            if (entList == null || entList.Count == 0) {
+
+                result = CheckResult.GRID_NOT_FOUND;
+                return GridsGroup;
+            }
 
             worldMatrix = controlledEntity.GetHeadMatrix(true, true, false); // dead center of player cross hairs, or the direction the player is looking with ALT.
             startPosition = worldMatrix.Translation + worldMatrix.Forward * 0.5f;
@@ -225,43 +250,46 @@ namespace ALE_ShipFixer {
 
             var list = new Dictionary<MyCubeGrid, double>();
             var ray = new RayD(startPosition, worldMatrix.Forward);
+            var FoundWrongOwner = false;
 
-            Parallel.ForEach(MyCubeGridGroups.Static.Physical.Groups, group => {
-                foreach (MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Node groupNodes in group.Nodes) {
-                    MyCubeGrid cubeGrid = groupNodes.NodeData;
+            foreach (var ent in entList) {
 
-                    if (cubeGrid != null) {
-                        if (cubeGrid.Physics == null)
-                            continue;
+                if (ent is MyCubeGrid cubeGrid) {
 
-                        /* We are not the server and playerId is not owner */
-                        if (playerId != 0 && !OwnershipCorrect(cubeGrid, playerId, factionFixEnabled))
-                            continue;
+                    if (cubeGrid.Physics != null) {
 
                         // check if the ray comes anywhere near the Grid before continuing.    
                         if (ray.Intersects(cubeGrid.PositionComp.WorldAABB).HasValue) {
+
                             Vector3I? hit = cubeGrid.RayCastBlocks(startPosition, endPosition);
 
                             if (hit.HasValue) {
+
+                                /* We are not the server and playerId is not owner */
+                                if (playerId != 0 && !OwnershipCorrect(cubeGrid, playerId, factionFixEnabled)) {
+
+                                    FoundWrongOwner = true;
+                                    continue;
+                                }
+
                                 double distance = (startPosition - cubeGrid.GridIntegerToWorld(hit.Value)).Length();
 
                                 if (list.TryGetValue(cubeGrid, out double oldDistance)) {
 
                                     if (distance < oldDistance) {
+
                                         list.Remove(cubeGrid);
                                         list.Add(cubeGrid, distance);
                                     }
 
-                                } else {
-                                    list.Add(cubeGrid, distance);
                                 }
+                                else
+                                    list.Add(cubeGrid, distance);
                             }
                         }
                     }
                 }
-            });
-
-            var GridsGroup = new List<MyCubeGrid>();
+            }
 
             // find the closest Entity.
             if (list != null && list.Any()) {
@@ -273,7 +301,7 @@ namespace ALE_ShipFixer {
                 MyAPIGateway.GridGroups.GetGroup(grid, GridLinkTypeEnum.Physical, IMygrids);
 
                 // convert back to MyCubeGrid
-                foreach (var Mygrid in IMygrids) 
+                foreach (var Mygrid in IMygrids)
                     GridsGroup.Add((MyCubeGrid)Mygrid);
                 
                 // sort the list. largest to smallest
@@ -281,15 +309,22 @@ namespace ALE_ShipFixer {
                 GridsGroup.Reverse();
                 GridsGroup.SortNoAlloc((x, y) => x.GridSizeEnum.CompareTo(y.GridSizeEnum));
 
+                result = CheckResult.OK;
                 return GridsGroup;
             }
+
+            if (FoundWrongOwner)
+                result = CheckResult.OWNED_BY_DIFFERENT_PLAYER;
+            else
+                result = CheckResult.GRID_NOT_FOUND;
 
             return GridsGroup;
         }
 
-        public static List<MyCubeGrid> FindGridGroupsForPlayer(string gridName, long playerId, bool factionFixEnabled) {
+        public static List<MyCubeGrid> FindGridGroupsForPlayer(string gridName, long playerId, bool factionFixEnabled, out CheckResult result) {
        
             List<MyCubeGrid> GridsGroup = new List<MyCubeGrid>();
+            var WrongOwner = false;
 
             Parallel.ForEach(MyCubeGridGroups.Static.Physical.Groups, group => {
 
@@ -304,8 +339,11 @@ namespace ALE_ShipFixer {
                         continue;
 
                     /* We are not the server and playerId is not owner */
-                    if (playerId != 0 && !OwnershipCorrect(grid, playerId, factionFixEnabled))
+                    if (playerId != 0 && !OwnershipCorrect(grid, playerId, factionFixEnabled)) {
+
+                        WrongOwner = true;
                         continue;
+                    }
 
                     GridsGroup.Add(grid);
                     break;
@@ -328,9 +366,19 @@ namespace ALE_ShipFixer {
                 GridsGroup.SortNoAlloc((grid1, grid2) => grid1.BlocksCount.CompareTo(grid2.BlocksCount));
                 GridsGroup.Reverse();
                 GridsGroup.SortNoAlloc((grid1, grid2) => grid1.GridSizeEnum.CompareTo(grid2.GridSizeEnum));
-            }
 
-            return GridsGroup;
+                result = CheckResult.OK;
+                return GridsGroup;
+            }
+            else
+            {
+                if (WrongOwner)
+                    result = CheckResult.OWNED_BY_DIFFERENT_PLAYER;
+                else
+                    result = CheckResult.GRID_NOT_FOUND;
+
+                return GridsGroup;
+            }
         }
 
         public static bool OwnershipCorrect(MyCubeGrid grid, long playerId, bool checkFactions) {
