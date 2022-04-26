@@ -1,15 +1,12 @@
-﻿using ALE_Core;
-using ALE_Core.Cooldown;
+﻿using ALE_Core.Cooldown;
 using ALE_Core.Utils;
 using NLog;
 using Sandbox.Game.Entities;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Torch.Commands;
 using Torch.Commands.Permissions;
 using VRage.Game.ModAPI;
-using VRage.Groups;
 
 namespace ALE_ShipFixer {
 
@@ -17,7 +14,7 @@ namespace ALE_ShipFixer {
 
         public static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
-        public ShipFixerPlugin Plugin => (ShipFixerPlugin) Context.Plugin;
+        public ShipFixerPlugin Plugin => (ShipFixerPlugin)Context.Plugin;
 
         [Command("fixshipmod", "Cuts and pastes a ship with the given name to try to fix various bugs.")]
         [Permission(MyPromoteLevel.Moderator)]
@@ -47,7 +44,7 @@ namespace ALE_ShipFixer {
 
             try {
 
-                var result = Plugin.FixShip(gridName, 0);
+                var result = ShipFixerCore.Instance.FixShip(0, gridName);
                 WriteResponse(result);
 
             } catch (Exception e) {
@@ -58,10 +55,9 @@ namespace ALE_ShipFixer {
         public void FixShipModLookedAt() {
 
             if (Context.Player == null) {
-
                 Context.Respond("Console has no Character so cannot use this command. Use !fixshipmod <Gridname> instead!");
                 return;
-            } 
+            }
 
             IMyCharacter character = Context.Player.Character;
 
@@ -77,7 +73,7 @@ namespace ALE_ShipFixer {
 
             try {
 
-                var result = Plugin.FixShip(character, 0);
+                var result = ShipFixerCore.Instance.FixShip(character, 0);
                 WriteResponse(result);
 
             } catch (Exception e) {
@@ -89,7 +85,7 @@ namespace ALE_ShipFixer {
         [Permission(MyPromoteLevel.None)]
         public void FixShipPlayer() {
 
-            if(!Plugin.PlayerCommandEnabled) {
+            if (!Plugin.PlayerCommandEnabled) {
                 Context.Respond("This command was disabled for players use!");
                 return;
             }
@@ -112,7 +108,6 @@ namespace ALE_ShipFixer {
         public void FixShipPlayerGridName(string gridName) {
 
             IMyPlayer player = Context.Player;
-
             long playerId;
 
             if (player == null) {
@@ -125,12 +120,13 @@ namespace ALE_ShipFixer {
             }
 
             CooldownManager cooldownManager = Plugin.CommandCooldownManager;
-
             var steamId = new SteamIdCooldownKey(PlayerUtils.GetSteamId(Context.Player));
 
-            if(!cooldownManager.CheckCooldown(steamId, null, out long remainingSeconds)) {
+            if (!cooldownManager.CheckCooldown(steamId, null, out long remainingSeconds)) {
+
                 Log.Info("Cooldown for Player " + player.DisplayName + " still running! " + remainingSeconds + " seconds remaining!");
                 Context.Respond("Command is still on cooldown for " + remainingSeconds + " seconds.");
+               
                 return;
             }
 
@@ -139,11 +135,10 @@ namespace ALE_ShipFixer {
 
             try {
 
-                var result = Plugin.FixShip(gridName, playerId);
+                var result = ShipFixerCore.Instance.FixShip(playerId, gridName);
                 WriteResponse(result);
 
                 if (result == CheckResult.SHIP_FIXED) {
-
                     Log.Info("Cooldown for Player " + player.DisplayName + " started!");
                     cooldownManager.StartCooldown(steamId, null, Plugin.Cooldown);
                 }
@@ -156,7 +151,6 @@ namespace ALE_ShipFixer {
         public void FixShipPlayerLookAt() {
 
             IMyPlayer player = Context.Player;
-
             long playerId;
 
             if (player == null) {
@@ -176,12 +170,13 @@ namespace ALE_ShipFixer {
             }
 
             CooldownManager cooldownManager = Plugin.CommandCooldownManager;
-
             var steamId = new SteamIdCooldownKey(PlayerUtils.GetSteamId(Context.Player));
 
             if (!cooldownManager.CheckCooldown(steamId, null, out long remainingSeconds)) {
+
                 Log.Info("Cooldown for Player " + player.DisplayName + " still running! " + remainingSeconds + " seconds remaining!");
                 Context.Respond("Command is still on cooldown for " + remainingSeconds + " seconds.");
+              
                 return;
             }
 
@@ -190,11 +185,10 @@ namespace ALE_ShipFixer {
 
             try {
 
-                var result = Plugin.FixShip(character, playerId);
+                var result = ShipFixerCore.Instance.FixShip(character, playerId);
                 WriteResponse(result);
 
                 if (result == CheckResult.SHIP_FIXED) {
-
                     Log.Info("Cooldown for Player " + player.DisplayName + " started!");
                     cooldownManager.StartCooldown(steamId, null, Plugin.Cooldown);
                 }
@@ -205,67 +199,48 @@ namespace ALE_ShipFixer {
         }
 
         private bool CheckConformation(ICooldownKey cooldownKey, long playerId, string gridName, IMyCharacter character) {
-
+          
             var cooldownManager = Plugin.ConfirmationCooldownManager;
+
             if (!cooldownManager.CheckCooldown(cooldownKey, gridName, out _)) {
                 cooldownManager.StopCooldown(cooldownKey);
                 return true;
             }
 
-            if (!CheckGridFound(playerId, gridName, character, out MyCubeGrid grid))
-                return false;
-
-            if(grid != null)
-                Context.Respond("Are you sure you want to continue? Enter the command again within " + Plugin.CooldownConfirmationSeconds + " seconds to confirm fixship on " + grid.DisplayName + ".");
-            else
-                Context.Respond("Are you sure you want to continue? Enter the command again within " + Plugin.CooldownConfirmationSeconds + " seconds.");
-
-            cooldownManager.StartCooldown(cooldownKey, gridName, Plugin.Cooldown);
-
-            return false;
-        }
-
-        private bool CheckGridFound(long playerId, string gridName, IMyCharacter character, out MyCubeGrid grid) {
-
-            ConcurrentBag<MyGroups<MyCubeGrid, MyGridPhysicalGroupData>.Group> groups;
+            List<MyCubeGrid> GridGroups;
+            CheckResult SearchResult;
 
             if (character == null)
-                groups = ShipFixerPlugin.FindGridGroupsForPlayer(gridName, playerId, Plugin.FactionFixEnabled);
+                GridGroups = ShipFixerCore.FindGridGroupsForPlayer(gridName, playerId, Plugin.FactionFixEnabled, out SearchResult);
             else
-                groups = ShipFixerPlugin.FindLookAtGridGroup(character, playerId, Plugin.FactionFixEnabled);
+                GridGroups = ShipFixerCore.FindLookAtGridGroup(character, playerId, Plugin.FactionFixEnabled, out SearchResult);
 
-            CheckResult result = ShipFixerPlugin.CheckGroups(groups, out _, playerId, Plugin.FactionFixEnabled);
-
-            grid = null;
-
-            if (result != CheckResult.OK) {
-                
-                WriteResponse(result);
-
+            if (GridGroups == null || GridGroups.Count == 0 || SearchResult != CheckResult.OK) {
+                WriteResponse(SearchResult);
                 return false;
             }
 
-            List<MyCubeGrid> grids = new List<MyCubeGrid>();
+            var EjectPlayers = false;
+            CheckResult result = ShipFixerCore.CheckGroups(GridGroups, out _, playerId, Plugin.FactionFixEnabled, EjectPlayers);
 
-            foreach(var group in groups) {
-
-                foreach (var node in group.Nodes)
-                    grids.Add(node.NodeData);
-
-                break;
+            if (result != CheckResult.OK) {
+                WriteResponse(result);
+                return false;
             }
 
-            grid = GridUtils.GetBiggestGridInGroup(grids);
+            cooldownManager.StartCooldown(cooldownKey, gridName, Plugin.CooldownConfirmation);
 
-            return true;
+            Context.Respond("Are you sure you want to continue? Enter the command again within " + Plugin.CooldownConfirmationSeconds + " seconds to confirm fixship on " + GridGroups[0].DisplayName + ".");
+            
+            return false;
         }
 
         private void WriteResponse(CheckResult result) {
 
-            switch(result) {
+            switch (result) {
 
                 case CheckResult.TOO_FEW_GRIDS:
-                    Context.Respond("Could not find your Grid. Check if ownership is correct");
+                    Context.Respond("Could not find your Grid, Or Check if ownership is correct");
                     break;
 
                 case CheckResult.TOO_MANY_GRIDS:
@@ -290,6 +265,10 @@ namespace ALE_ShipFixer {
 
                 case CheckResult.SHIP_FIXED:
                     Context.Respond("Ship was fixed!");
+                    break;
+
+                case CheckResult.GRID_NOT_FOUND:
+                    Context.Respond("Grid not found");
                     break;
             }
         }

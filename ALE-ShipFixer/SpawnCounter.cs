@@ -3,25 +3,25 @@ using Sandbox.ModAPI;
 using System.Collections.Generic;
 using VRage.ModAPI;
 
-namespace ALE_ShipFixer.ALE_ShipFixer
-{
-    public static class SpawnCounter
-    {
-        public class SpawnCallback
-        {
+namespace ALE_ShipFixer {
+
+    public static class SpawnCounter {
+
+        public class SpawnCallback {
+
             private int _counter;
-            private List<IMyEntity> _entlist;
+            private readonly List<IMyEntity> _entlist;
             private readonly int _maxCount;
 
-            public SpawnCallback(int count)
-            {
+            public SpawnCallback(int count) {
+                
                 _counter = 0;
                 _entlist = new List<IMyEntity>();
                 _maxCount = count;
             }
 
-            public void Increment(IMyEntity ent)
-            {
+            public void Increment(IMyEntity ent) {
+                
                 _counter++;
                 _entlist.Add(ent);
 
@@ -31,10 +31,9 @@ namespace ALE_ShipFixer.ALE_ShipFixer
                 FinalSpawnCallback(_entlist);
             }
 
-            private static void FinalSpawnCallback(List<IMyEntity> grids)
-            {
-                foreach (MyCubeGrid ent in grids)
-                {
+            private static void FinalSpawnCallback(List<IMyEntity> grids) {
+
+                foreach (MyCubeGrid ent in grids) {
                     ent.DetectDisconnectsAfterFrame();
                     MyAPIGateway.Entities.AddEntity(ent, true);
                 }
