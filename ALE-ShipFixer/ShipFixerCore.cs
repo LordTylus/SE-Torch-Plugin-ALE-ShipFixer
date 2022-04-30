@@ -114,23 +114,39 @@ namespace ALE_ShipFixer {
                             var PlayerRemoved = false;
                             var WaitSecondConfirmation = false;
 
-                            if (GridOwnerFaction != null && ControllingPlayerFaction != null) {
+                            // if request is from ADMIN no checks, eject all active players
+                            if (playerId == 0) {
 
-                                var FactionsRelationship = MySession.Static.Factions.GetRelationBetweenFactions(GridOwnerFaction.FactionId, ControllingPlayerFaction.FactionId);
-
-                                if (GridOwnerFaction.FactionId == ControllingPlayerFaction.FactionId || FactionsRelationship.Item1 != MyRelationsBetweenFactions.Enemies) {
-
-                                    // Eject only after confirmation
-                                    if (EjectPlayers)
+                                // Eject only after confirmation
+                                if (EjectPlayers)
+                                {
+                                    if (controller.Pilot != null && controller is MyShipController ShipController)
                                     {
-                                        if (controller.Pilot != null && controller is MyShipController ShipController)
-                                        {
-                                            ShipController.Use();
-                                            PlayerRemoved = true;
-                                        }
+                                        ShipController.Use();
+                                        PlayerRemoved = true;
                                     }
-                                    else
-                                        WaitSecondConfirmation = true;
+                                }
+                                else
+                                    WaitSecondConfirmation = true;
+                            } else {
+                                if (GridOwnerFaction != null && ControllingPlayerFaction != null) {
+
+                                    var FactionsRelationship = MySession.Static.Factions.GetRelationBetweenFactions(GridOwnerFaction.FactionId, ControllingPlayerFaction.FactionId);
+
+                                    if (GridOwnerFaction.FactionId == ControllingPlayerFaction.FactionId || FactionsRelationship.Item1 != MyRelationsBetweenFactions.Enemies) {
+
+                                        // Eject only after confirmation
+                                        if (EjectPlayers) {
+
+                                            if (controller.Pilot != null && controller is MyShipController ShipController) {
+
+                                                ShipController.Use();
+                                                PlayerRemoved = true;
+                                            }
+                                        }
+                                        else
+                                            WaitSecondConfirmation = true;
+                                    }
                                 }
                             }
 
