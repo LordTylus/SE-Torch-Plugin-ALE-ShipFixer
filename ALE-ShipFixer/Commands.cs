@@ -211,9 +211,9 @@ namespace ALE_ShipFixer {
             CheckResult SearchResult;
 
             if (character == null)
-                GridGroups = ShipFixerCore.FindGridGroupsForPlayer(gridName, playerId, Plugin.FactionFixEnabled, out SearchResult);
+                GridGroups = ShipFixerCore.FindGridGroupsForPlayer(gridName, playerId, out SearchResult);
             else
-                GridGroups = ShipFixerCore.FindLookAtGridGroup(character, playerId, Plugin.FactionFixEnabled, out SearchResult);
+                GridGroups = ShipFixerCore.FindLookAtGridGroup(character, playerId, out SearchResult);
 
             if (GridGroups == null || GridGroups.Count == 0 || SearchResult != CheckResult.OK) {
                 WriteResponse(SearchResult);
@@ -221,7 +221,7 @@ namespace ALE_ShipFixer {
             }
 
             var EjectPlayers = false;
-            CheckResult result = ShipFixerCore.CheckGroups(GridGroups, out _, playerId, Plugin.FactionFixEnabled, EjectPlayers);
+            CheckResult result = ShipFixerCore.CheckGroups(GridGroups, out _, playerId, EjectPlayers);
 
             if (result != CheckResult.OK) {
                 WriteResponse(result);
