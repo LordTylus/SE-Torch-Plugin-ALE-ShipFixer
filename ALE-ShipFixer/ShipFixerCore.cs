@@ -38,6 +38,13 @@ namespace ALE_ShipFixer {
             return FixGroups(groups, playerId);
         }
 
+        public CheckResult FixShip(long playerId, long gridID, string gridName = "nogrid") {
+
+            var groups = FindGridGroupsForPlayer(gridName, playerId, out CheckResult _, gridID);
+
+            return FixGroups(groups, playerId);
+        }
+
         public static CheckResult CheckGroups(List<MyCubeGrid> groups, out List<MyCubeGrid> group, long playerId, bool EjectPlayers = true) {
 
             group = groups;
@@ -331,7 +338,7 @@ namespace ALE_ShipFixer {
             return GridsGroup;
         }
 
-        public static List<MyCubeGrid> FindGridGroupsForPlayer(string gridName, long playerId, out CheckResult result) {
+        public static List<MyCubeGrid> FindGridGroupsForPlayer(string gridName, long playerId, out CheckResult result, long ID = 0) {
        
             List<MyCubeGrid> GridsGroup = new List<MyCubeGrid>();
             var WrongOwner = false;
@@ -344,19 +351,29 @@ namespace ALE_ShipFixer {
                     if (grid.Physics == null)
                         continue;
 
-                    /* Gridname is wrong ignore */
-                    if (!grid.DisplayName.Equals(gridName))
-                        continue;
+                    if (ID != 0) {
 
-                    /* We are not the server and playerId is not owner */
-                    if (playerId != 0 && !OwnershipCorrect(grid, playerId)) {
+                        if (grid.EntityId == ID) {
 
-                        WrongOwner = true;
-                        continue;
+                            GridsGroup.Add(grid);
+                            break;
+                        }
+                    } else {
+
+                        /* Gridname is wrong ignore */
+                        if (!grid.DisplayName.Equals(gridName))
+                            continue;
+
+                        /* We are not the server and playerId is not owner */
+                        if (playerId != 0 && !OwnershipCorrect(grid, playerId)) {
+
+                            WrongOwner = true;
+                            continue;
+                        }
+
+                        GridsGroup.Add(grid);
+                        break;
                     }
-
-                    GridsGroup.Add(grid);
-                    break;
                 }
             });
 

@@ -35,6 +35,33 @@ namespace ALE_ShipFixer {
             }
         }
 
+        [Command("fixshipmodid", "Cuts and pastes a ship with the given ID to try to fix various bugs.")]
+        [Permission(MyPromoteLevel.Moderator)]
+        public void FixShipModID(long ID = 0) {
+
+            if (ID == 0)
+                Context.Respond("Correct Usage is !fixshipmodid EntityID");
+
+            FixShipModGridID(ID);
+        }
+
+        public void FixShipModGridID(long gridID) {
+
+            var steamId = new SteamIdCooldownKey(PlayerUtils.GetSteamId(Context.Player));
+
+            if (!CheckConformation(steamId, 0, "nogrid", null, gridID))
+                return;
+
+            try {
+
+                var result = ShipFixerCore.Instance.FixShip(0, gridID);
+                WriteResponse(result);
+
+            } catch (Exception e) {
+                Log.Error(e, "Error on fixing ship");
+            }
+        }
+
         public void FixShipModGridName(string gridName) {
 
             var steamId = new SteamIdCooldownKey(PlayerUtils.GetSteamId(Context.Player));
@@ -198,7 +225,7 @@ namespace ALE_ShipFixer {
             }
         }
 
-        private bool CheckConformation(ICooldownKey cooldownKey, long playerId, string gridName, IMyCharacter character) {
+        private bool CheckConformation(ICooldownKey cooldownKey, long playerId, string gridName, IMyCharacter character, long ID = 0) {
           
             var cooldownManager = Plugin.ConfirmationCooldownManager;
 
@@ -210,10 +237,15 @@ namespace ALE_ShipFixer {
             List<MyCubeGrid> GridGroups;
             CheckResult SearchResult;
 
-            if (character == null)
-                GridGroups = ShipFixerCore.FindGridGroupsForPlayer(gridName, playerId, out SearchResult);
-            else
-                GridGroups = ShipFixerCore.FindLookAtGridGroup(character, playerId, out SearchResult);
+            if (character == null && ID != 0)
+                GridGroups = ShipFixerCore.FindGridGroupsForPlayer(gridName, playerId, out SearchResult, ID);
+            else {
+
+                if (character == null)
+                    GridGroups = ShipFixerCore.FindGridGroupsForPlayer(gridName, playerId, out SearchResult);
+                else
+                    GridGroups = ShipFixerCore.FindLookAtGridGroup(character, playerId, out SearchResult);
+            }
 
             if (GridGroups == null || GridGroups.Count == 0 || SearchResult != CheckResult.OK) {
                 WriteResponse(SearchResult);
