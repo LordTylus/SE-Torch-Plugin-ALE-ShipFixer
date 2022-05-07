@@ -39,8 +39,11 @@ namespace ALE_ShipFixer {
         [Permission(MyPromoteLevel.Moderator)]
         public void FixShipModID(long ID = 0) {
 
-            if (ID == 0)
+            if (ID == 0) {
+
                 Context.Respond("Correct Usage is !fixshipmodid EntityID");
+                return;
+            }
 
             FixShipModGridID(ID);
         }
