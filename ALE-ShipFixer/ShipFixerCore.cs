@@ -1,8 +1,6 @@
-using ALE_Core.Utils;
 using NLog;
 using Sandbox.Common.ObjectBuilders;
 using Sandbox.Game.Entities;
-using Sandbox.Game.Entities.Blocks;
 using Sandbox.Game.World;
 using Sandbox.ModAPI;
 using System.Collections.Generic;
@@ -28,19 +26,26 @@ namespace ALE_ShipFixer {
 
         public CheckResult FixShip(IMyCharacter character, long playerId) {
 
-            var groups = FindLookAtGridGroup(character, playerId, ShipFixerPlugin.Instance.FactionFixEnabled, out CheckResult SearchResult);
+            var groups = FindLookAtGridGroup(character, playerId, out CheckResult _);
 
             return FixGroups(groups, playerId);
         }
 
         public CheckResult FixShip(long playerId, string gridName) {
 
-            var groups = FindGridGroupsForPlayer(gridName, playerId, ShipFixerPlugin.Instance.FactionFixEnabled, out CheckResult SearchResult);
+            var groups = FindGridGroupsForPlayer(gridName, playerId, out CheckResult _);
 
             return FixGroups(groups, playerId);
         }
 
-        public static CheckResult CheckGroups(List<MyCubeGrid> groups, out List<MyCubeGrid> group, long playerId, bool factionFixEnabled, bool EjectPlayers = true) {
+        public CheckResult FixShip(long playerId, long gridID, string gridName = "nogrid") {
+
+            var groups = FindGridGroupsForPlayer(gridName, playerId, out CheckResult _, gridID);
+
+            return FixGroups(groups, playerId);
+        }
+
+        public static CheckResult CheckGroups(List<MyCubeGrid> groups, out List<MyCubeGrid> group, long playerId, bool EjectPlayers = true) {
 
             group = groups;
 
@@ -55,7 +60,7 @@ namespace ALE_ShipFixer {
                         continue;
 
                     /* We are not the server and playerId is not owner */
-                    if (!OwnershipCorrect(grid, playerId, factionFixEnabled))
+                    if (!OwnershipCorrect(grid, playerId))
                         continue;
 
                     referenceGrid = grid;
@@ -77,7 +82,7 @@ namespace ALE_ShipFixer {
                         continue;
 
                     /* We are not the server and playerId is not owner */
-                    if (!OwnershipCorrect(grid, playerId, factionFixEnabled))
+                    if (!OwnershipCorrect(grid, playerId))
                         return CheckResult.OWNED_BY_DIFFERENT_PLAYER;
                 }
             }
@@ -114,23 +119,39 @@ namespace ALE_ShipFixer {
                             var PlayerRemoved = false;
                             var WaitSecondConfirmation = false;
 
-                            if (GridOwnerFaction != null && ControllingPlayerFaction != null) {
+                            // if request is from ADMIN no checks, eject all active players
+                            if (playerId == 0) {
 
-                                var FactionsRelationship = MySession.Static.Factions.GetRelationBetweenFactions(GridOwnerFaction.FactionId, ControllingPlayerFaction.FactionId);
-
-                                if (GridOwnerFaction.FactionId == ControllingPlayerFaction.FactionId || FactionsRelationship.Item1 != MyRelationsBetweenFactions.Enemies) {
-
-                                    // Eject only after confirmation
-                                    if (EjectPlayers)
+                                // Eject only after confirmation
+                                if (EjectPlayers)
+                                {
+                                    if (controller.Pilot != null && controller is MyShipController ShipController)
                                     {
-                                        if (controller.Pilot != null && controller is MyShipController ShipController)
-                                        {
-                                            ShipController.Use();
-                                            PlayerRemoved = true;
-                                        }
+                                        ShipController.Use();
+                                        PlayerRemoved = true;
                                     }
-                                    else
-                                        WaitSecondConfirmation = true;
+                                }
+                                else
+                                    WaitSecondConfirmation = true;
+                            } else {
+                                if (GridOwnerFaction != null && ControllingPlayerFaction != null) {
+
+                                    var FactionsRelationship = MySession.Static.Factions.GetRelationBetweenFactions(GridOwnerFaction.FactionId, ControllingPlayerFaction.FactionId);
+
+                                    if (GridOwnerFaction.FactionId == ControllingPlayerFaction.FactionId || FactionsRelationship.Item1 != MyRelationsBetweenFactions.Enemies) {
+
+                                        // Eject only after confirmation
+                                        if (EjectPlayers) {
+
+                                            if (controller.Pilot != null && controller is MyShipController ShipController) {
+
+                                                ShipController.Use();
+                                                PlayerRemoved = true;
+                                            }
+                                        }
+                                        else
+                                            WaitSecondConfirmation = true;
+                                    }
                                 }
                             }
 
@@ -159,8 +180,12 @@ namespace ALE_ShipFixer {
 
             MyIdentity executingPlayer = null;
 
-            if (playerId != 0)
-                executingPlayer = PlayerUtils.GetIdentityById(playerId);
+            if (playerId != 0) {
+
+                foreach (var identity in MySession.Static.Players.GetAllIdentities())
+                    if (identity.IdentityId == playerId)
+                        executingPlayer = identity;
+            }
 
             return FixGroup(group, executingPlayer);
         }
@@ -182,25 +207,23 @@ namespace ALE_ShipFixer {
                 grid.Physics.ClearSpeed();
                 MyObjectBuilder_EntityBase ob = grid.GetObjectBuilder(true);
 
-                if (!objectBuilderList.Contains(ob)) {
-                    if (ob is MyObjectBuilder_CubeGrid gridBuilder) {
-                        foreach (MyObjectBuilder_CubeBlock cubeBlock in gridBuilder.CubeBlocks) {
+                if (ob is MyObjectBuilder_CubeGrid gridBuilder) {
+                    foreach (MyObjectBuilder_CubeBlock cubeBlock in gridBuilder.CubeBlocks) {
 
-                            if (cubeBlock is MyObjectBuilder_ProjectorBase projector) {
+                        if (cubeBlock is MyObjectBuilder_ProjectorBase projector) {
                                 
-                                projector.Enabled = false;
+                            projector.Enabled = false;
 
-                                if (ShipFixerPlugin.Instance.Config.RemoveBlueprintsFromProjectors)
-                                    projector.ProjectedGrids = null;
-                            }
-
-                            if (cubeBlock is MyObjectBuilder_OxygenTank o2Tank)
-                                o2Tank.AutoRefill = false;
+                            if (ShipFixerPlugin.Instance.Config.RemoveBlueprintsFromProjectors)
+                                projector.ProjectedGrids = null;
                         }
-                    }
 
-                    objectBuilderList.Add(ob);
+                        if (cubeBlock is MyObjectBuilder_OxygenTank o2Tank)
+                            o2Tank.AutoRefill = false;
+                    }
                 }
+
+                objectBuilderList.Add(ob);
             }
 
             foreach (MyCubeGrid grid in gridsList) {
@@ -220,7 +243,7 @@ namespace ALE_ShipFixer {
             return CheckResult.SHIP_FIXED;
         }
 
-        public static List<MyCubeGrid> FindLookAtGridGroup(IMyCharacter controlledEntity, long playerId, bool factionFixEnabled, out CheckResult result) {
+        public static List<MyCubeGrid> FindLookAtGridGroup(IMyCharacter controlledEntity, long playerId, out CheckResult result) {
 
             const float range = 5000;
             Matrix worldMatrix;
@@ -260,7 +283,7 @@ namespace ALE_ShipFixer {
                             if (hit.HasValue) {
 
                                 /* We are not the server and playerId is not owner */
-                                if (playerId != 0 && !OwnershipCorrect(cubeGrid, playerId, factionFixEnabled)) {
+                                if (playerId != 0 && !OwnershipCorrect(cubeGrid, playerId)) {
 
                                     FoundWrongOwner = true;
                                     continue;
@@ -315,7 +338,7 @@ namespace ALE_ShipFixer {
             return GridsGroup;
         }
 
-        public static List<MyCubeGrid> FindGridGroupsForPlayer(string gridName, long playerId, bool factionFixEnabled, out CheckResult result) {
+        public static List<MyCubeGrid> FindGridGroupsForPlayer(string gridName, long playerId, out CheckResult result, long ID = 0) {
        
             List<MyCubeGrid> GridsGroup = new List<MyCubeGrid>();
             var WrongOwner = false;
@@ -328,19 +351,29 @@ namespace ALE_ShipFixer {
                     if (grid.Physics == null)
                         continue;
 
-                    /* Gridname is wrong ignore */
-                    if (!grid.DisplayName.Equals(gridName))
-                        continue;
+                    if (ID != 0) {
 
-                    /* We are not the server and playerId is not owner */
-                    if (playerId != 0 && !OwnershipCorrect(grid, playerId, factionFixEnabled)) {
+                        if (grid.EntityId == ID) {
 
-                        WrongOwner = true;
-                        continue;
+                            GridsGroup.Add(grid);
+                            break;
+                        }
+                    } else {
+
+                        /* Gridname is wrong ignore */
+                        if (!grid.DisplayName.Equals(gridName))
+                            continue;
+
+                        /* We are not the server and playerId is not owner */
+                        if (playerId != 0 && !OwnershipCorrect(grid, playerId)) {
+
+                            WrongOwner = true;
+                            continue;
+                        }
+
+                        GridsGroup.Add(grid);
+                        break;
                     }
-
-                    GridsGroup.Add(grid);
-                    break;
                 }
             });
 
@@ -375,20 +408,32 @@ namespace ALE_ShipFixer {
             }
         }
 
-        public static bool OwnershipCorrect(MyCubeGrid grid, long playerId, bool checkFactions) {
+        public static bool OwnershipCorrect(MyCubeGrid grid, long playerId) {
 
-            /* If Player is owner we are totally fine and can allow it */
-            if (grid.BigOwners.Contains(playerId))
+            long gridOwner = 0L;
+
+            /* If Player is the main owner we are totally fine and can allow it */
+            if (grid.BigOwners != null && (grid.BigOwners.FirstOrDefault().Equals(playerId) || grid.BigOwners.FirstOrDefault().Equals(0L)))
                 return true;
 
             /* If he is not owner and we dont want to allow checks for faction members... then prohibit */
-            if (!checkFactions)
+            if (!ShipFixerPlugin.Instance.Config.FixShipFactionEnabled)
                 return false;
 
             /* If checks for faction are allowed grab owner and see if factions are equal */
-            long gridOwner = OwnershipUtils.GetOwner(grid);
+            if (grid.BigOwners != null)
+                gridOwner = grid.BigOwners.FirstOrDefault();
 
-            return FactionUtils.HavePlayersSameFaction(playerId, gridOwner);
+            var PlayerFaction = MySession.Static.Factions.TryGetPlayerFaction(playerId);
+            var OwnerFaction = MySession.Static.Factions.TryGetPlayerFaction(gridOwner);
+
+            if (PlayerFaction != null && OwnerFaction != null) {
+
+                if (PlayerFaction.FactionId == OwnerFaction.FactionId)
+                    return true;
+            }
+
+            return false;
         }
     }
 }
