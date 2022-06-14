@@ -162,7 +162,6 @@
   <ItemGroup>
     <Compile Include="ALE-ShipFixer\CheckResult.cs" />
     <Compile Include="ALE-ShipFixer\ShipFixerCore.cs" />
-    <Compile Include="ALE-ShipFixer\SpawnCounter.cs" />
     <Compile Include="ALE-ShipFixer\Commands.cs" />
     <Compile Include="ALE-ShipFixer\Control.xaml.cs">
       <DependentUpon>Control.xaml</DependentUpon>
@@ -179,11 +178,11 @@
   </ItemGroup>
   <Import Project="ALE-Core\ALE-Core.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-    <ItemGroup>
-        <Content Include="$(ProjectDir)\manifest.xml" CopyToOutputDirectory="PreserveNewest" />
-    </ItemGroup>
-    <Target Name="Zip" BeforeTargets="AfterBuild">
-        <MakeDir Directories="$(SolutionDir)\Build\" />
-        <ZipDirectory SourceDirectory="$(OutputPath)" DestinationFile="$(SolutionDir)\Build\$(MSBuildProjectName).zip" Overwrite="true" />
-    </Target>
+  <ItemGroup>
+    <Content Include="$(ProjectDir)\manifest.xml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="Zip" BeforeTargets="AfterBuild">
+    <MakeDir Directories="$(SolutionDir)\Build\" />
+    <ZipDirectory SourceDirectory="$(OutputPath)" DestinationFile="$(SolutionDir)\Build\$(MSBuildProjectName).zip" Overwrite="true" />
+  </Target>
 </Project>

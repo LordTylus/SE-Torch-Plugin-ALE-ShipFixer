@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using VRage.Game;
+using VRage.Game.Entity;
 using VRage.Game.ModAPI;
 using VRage.Groups;
 using VRage.ObjectBuilders;
@@ -199,7 +200,6 @@ namespace ALE_ShipFixer {
 
             List<MyObjectBuilder_EntityBase> objectBuilderList = new List<MyObjectBuilder_EntityBase>();
             List<MyCubeGrid> gridsList = new List<MyCubeGrid>();
-            SpawnCounter.SpawnCallback counter = null;
 
             foreach (var grid in GridGroups) {
 
@@ -235,10 +235,15 @@ namespace ALE_ShipFixer {
 
             MyAPIGateway.Entities.RemapObjectBuilderCollection(objectBuilderList);
 
-            counter = new SpawnCounter.SpawnCallback(objectBuilderList.Count);
-
-            foreach (var ObGrid in objectBuilderList) 
-                MyAPIGateway.Entities.CreateFromObjectBuilderParallel(ObGrid, false, counter.Increment);
+            foreach (var ObGrid in objectBuilderList)
+            {
+                MyEntities.CreateFromObjectBuilderParallel(ObGrid, false, delegate (MyEntity grid)
+                {
+                    var NewGrid = (MyCubeGrid)grid;
+                    NewGrid.DetectDisconnectsAfterFrame();
+                    MyEntities.Add(grid, true);
+                });
+            }
 
             return CheckResult.SHIP_FIXED;
         }
