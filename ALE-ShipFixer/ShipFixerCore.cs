@@ -234,14 +234,44 @@ namespace ALE_ShipFixer {
             }
 
             MyAPIGateway.Entities.RemapObjectBuilderCollection(objectBuilderList);
+            var NewMyEntityList = new List<MyEntity>();
+            var GridsCount = objectBuilderList.Count;
+            var GridsCreated = 0;
 
-            foreach (var ObGrid in objectBuilderList)
-            {
-                MyEntities.CreateFromObjectBuilderParallel(ObGrid, false, delegate (MyEntity grid)
-                {
+            foreach (var ObGrid in objectBuilderList) {
+
+                MyEntities.CreateFromObjectBuilderParallel(ObGrid, false, delegate (MyEntity grid) {
+
                     var NewGrid = (MyCubeGrid)grid;
+
+                    if (grid.Physics != null) {
+
+                        grid.Physics.Gravity = Vector3.Zero;
+                        grid.Physics.ClearSpeed();
+                        grid.Physics.Deactivate();
+                    }
+
                     NewGrid.DetectDisconnectsAfterFrame();
-                    MyEntities.Add(grid, true);
+                    NewMyEntityList.Add(grid);
+                    ++GridsCreated;
+
+                    if (GridsCount == GridsCreated) {
+
+                        NewMyEntityList.Reverse();
+
+                        foreach (var ReadyGrid in NewMyEntityList) {
+
+                            MyEntities.Add(ReadyGrid, true);
+
+                            if (ReadyGrid.Physics != null) {
+
+                                var GridGavity = (MyCubeGrid)ReadyGrid;
+                                ReadyGrid.Physics.Activate();
+                                ReadyGrid.Physics.Gravity = Vector3.Zero;
+                                GridGavity.Physics.DisableGravity = 2;
+                            }
+                        }
+                    }
                 });
             }
 
