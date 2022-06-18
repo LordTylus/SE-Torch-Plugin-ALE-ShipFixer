@@ -1,3 +1,4 @@
+using ALE_Core.EntitySpawner;
 using NLog;
 using Sandbox.Common.ObjectBuilders;
 using Sandbox.Game.Entities;
@@ -233,12 +234,7 @@ namespace ALE_ShipFixer {
                 grid.Close();
             }
 
-            MyAPIGateway.Entities.RemapObjectBuilderCollection(objectBuilderList);
-
-            counter = new SpawnCounter.SpawnCallback(objectBuilderList.Count);
-
-            foreach (var ObGrid in objectBuilderList) 
-                MyAPIGateway.Entities.CreateFromObjectBuilderParallel(ObGrid, false, counter.Increment);
+            EntitySpawner.SpawnInGridsPareallel(objectBuilderList);
 
             return CheckResult.SHIP_FIXED;
         }
