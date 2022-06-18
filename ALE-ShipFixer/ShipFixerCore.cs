@@ -234,7 +234,10 @@ namespace ALE_ShipFixer {
                 grid.Close();
             }
 
-            EntitySpawner.SpawnInGridsPareallel(objectBuilderList);
+            if(ShipFixerPlugin.Instance.Config.FixShipInParallel)
+                EntitySpawner.SpawnInGridsPareallel(objectBuilderList);
+            else
+                EntitySpawner.SpawnInGridsSequential(objectBuilderList);
 
             return CheckResult.SHIP_FIXED;
         }
