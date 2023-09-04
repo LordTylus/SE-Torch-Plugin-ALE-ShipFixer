@@ -8,6 +8,7 @@ namespace ALE_ShipFixer {
         private bool _removeBlueprintsFromProjectors = false;
         private bool _playerCommandEnabled = true;
         private bool _fixShipFactionEnabled = false;
+        private bool _ejectPlayers = false;
         private bool _fixShipInParallel = true;
 
         public int CooldownInSeconds { get => _cooldownInSeconds; set => SetValue(ref _cooldownInSeconds, value); }
@@ -19,6 +20,8 @@ namespace ALE_ShipFixer {
         public bool PlayerCommandEnabled { get => _playerCommandEnabled; set => SetValue(ref _playerCommandEnabled, value); }
 
         public bool FixShipFactionEnabled { get => _fixShipFactionEnabled; set => SetValue(ref _fixShipFactionEnabled, value); }
+
+        public bool EjectPlayers { get => _ejectPlayers; set => SetValue(ref _ejectPlayers, value); }
 
         public bool FixShipInParallel { get => _fixShipInParallel; set => SetValue(ref _fixShipInParallel, value); }
     }

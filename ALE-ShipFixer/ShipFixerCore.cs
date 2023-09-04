@@ -88,12 +88,8 @@ namespace ALE_ShipFixer {
                 }
             }
 
-            Dictionary<long, MyPlayer> dictionary = new Dictionary<long, MyPlayer>();
-
-            if (MySession.Static.Players.GetOnlinePlayers().Count > 0)
-                dictionary = MySession.Static.Players.GetOnlinePlayers().ToDictionary((MyPlayer b) => b.Identity.IdentityId);
-
             var GridOwnerFaction = MySession.Static.Factions.TryGetPlayerFaction(groups[0].BigOwners.FirstOrDefault());
+            var GridOccupied = false;
 
             /* Check if there are people in the cockpit */
             foreach (var grid in groups) {
@@ -111,59 +107,53 @@ namespace ALE_ShipFixer {
 
                     if (block is IMyShipController controller && controller.IsUnderControl) {
 
+                        // if request is from ADMIN no checks, eject all active players
+                        if (playerId == 0) {
+
+                            if (EjectPlayers) {
+
+                                if (controller.Pilot != null && controller is MyShipController ShipController)
+                                    ShipController.Use();
+
+                            } else
+                                GridOccupied = true;
+
+                            continue;
+                        }
+
                         var PlayerInControl = controller.ControllerInfo?.ControllingIdentityId;
                         var ControllingPlayerFaction = MySession.Static.Factions.TryGetPlayerFaction((long)PlayerInControl);
 
-                        /* Check if controlling player is online, if not we can fixship */
-                        if (PlayerInControl != null && dictionary.ContainsKey((long)PlayerInControl)) {
+                        // If Player in control of ship is Enemy of faction, fixship will not eject him
+                        if (GridOwnerFaction != null && ControllingPlayerFaction != null) {
 
-                            var PlayerRemoved = false;
-                            var WaitSecondConfirmation = false;
+                            var FactionsRelationship = MySession.Static.Factions.GetRelationBetweenFactions(GridOwnerFaction.FactionId, ControllingPlayerFaction.FactionId);
 
-                            // if request is from ADMIN no checks, eject all active players
-                            if (playerId == 0) {
-
-                                // Eject only after confirmation
-                                if (EjectPlayers)
-                                {
-                                    if (controller.Pilot != null && controller is MyShipController ShipController)
-                                    {
-                                        ShipController.Use();
-                                        PlayerRemoved = true;
-                                    }
-                                }
-                                else
-                                    WaitSecondConfirmation = true;
-                            } else {
-                                if (GridOwnerFaction != null && ControllingPlayerFaction != null) {
-
-                                    var FactionsRelationship = MySession.Static.Factions.GetRelationBetweenFactions(GridOwnerFaction.FactionId, ControllingPlayerFaction.FactionId);
-
-                                    if (GridOwnerFaction.FactionId == ControllingPlayerFaction.FactionId || FactionsRelationship.Item1 != MyRelationsBetweenFactions.Enemies) {
-
-                                        // Eject only after confirmation
-                                        if (EjectPlayers) {
-
-                                            if (controller.Pilot != null && controller is MyShipController ShipController) {
-
-                                                ShipController.Use();
-                                                PlayerRemoved = true;
-                                            }
-                                        }
-                                        else
-                                            WaitSecondConfirmation = true;
-                                    }
-                                }
-                            }
-
-                            if (WaitSecondConfirmation)
-                                return CheckResult.OK;
-
-                            if (!PlayerRemoved)
+                            if(GridOwnerFaction.FactionId != ControllingPlayerFaction.FactionId && FactionsRelationship.Item1 == MyRelationsBetweenFactions.Enemies) 
                                 return CheckResult.GRID_OCCUPIED;
                         }
+
+                        // If we end up here, the players are fine. Now just checking if Enject is necessary or Occupied Message
+                        if (EjectPlayers) {
+
+                            if (controller.Pilot != null && controller is MyShipController ShipController)
+                                ShipController.Use();
+
+                        } else
+                            GridOccupied = true;
                     }
                 }
+            }
+
+            if (GridOccupied) {
+
+                bool ejectingAllowed = ShipFixerPlugin.Instance.Config.EjectPlayers;
+
+                // If ejecting is allowed, ignore the occupation
+                if (ejectingAllowed)
+                    return CheckResult.OK;
+
+                return CheckResult.GRID_OCCUPIED;
             }
 
             return CheckResult.OK;
@@ -174,7 +164,8 @@ namespace ALE_ShipFixer {
             if (groups.Count == 0)
                 return CheckResult.GRID_NOT_FOUND;
 
-            var result = CheckGroups(groups, out List<MyCubeGrid> group, playerId, ShipFixerPlugin.Instance.FactionFixEnabled);
+            var result = CheckGroups(groups, out List<MyCubeGrid> group, playerId, 
+                ShipFixerPlugin.Instance.Config.EjectPlayers);
 
             if (result != CheckResult.OK)
                 return result;

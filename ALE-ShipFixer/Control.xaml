@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+             d:DesignHeight="850" d:DesignWidth="800">
     <Grid>
 
         <Grid.ColumnDefinitions>
@@ -13,6 +13,8 @@
             <ColumnDefinition Width="Auto" SharedSizeGroup="Buttons"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -49,18 +51,21 @@
         <TextBlock Grid.Column="0" Grid.Row ="6" VerticalAlignment="Center" Text="Should grids be fixed in parallel?&#x0a;(Better for Simulation-Speed, but may cause collisions with loose grids falling in gravity)" Margin="5"/>
         <CheckBox Name="FixShipInParallel" Grid.Column="1" Grid.Row ="6" Grid.ColumnSpan="2" Margin="5" IsChecked="{Binding FixShipInParallel}"/>
 
-        <Button Grid.Column="2" Grid.Row="7" Content="Save Config" Margin="5" Click="SaveButton_OnClick"></Button>
+        <TextBlock Grid.Column="0" Grid.Row ="7" VerticalAlignment="Center" Text="Should players be ejected from seats?&#x0a;(Doesn't work if enemy is in control of it)" Margin="5"/>
+        <CheckBox Name="EjectPlayers" Grid.Column="1" Grid.Row ="7" Grid.ColumnSpan="2" Margin="5" IsChecked="{Binding EjectPlayers}"/>
 
-        <TextBlock Grid.Column="0" Grid.Row ="8" VerticalAlignment="Center" Grid.ColumnSpan="2" Text="Commands" Margin="5" FontWeight="Bold" />
-        <TextBlock Grid.Column="0" Grid.Row ="9" VerticalAlignment="Center" Text="!fixship" Margin="5" />
-        <TextBlock Grid.Column="1" Grid.Row ="9" VerticalAlignment="Center" Grid.ColumnSpan="2" TextWrapping="Wrap" Text="Cuts and pastes ship you are looking at (accessible to all)" Margin="5"/>
-        <TextBlock Grid.Column="0" Grid.Row ="10" VerticalAlignment="Center" Text="!fixship &lt;shipname&gt;" Margin="5"/>
-        <TextBlock Grid.Column="1" Grid.Row ="10" VerticalAlignment="Center" Grid.ColumnSpan="2" TextWrapping="Wrap" Text="Cuts and pastes ship you are looking at by given name (accessible to all)" Margin="5"/>
-        <TextBlock Grid.Column="0" Grid.Row ="11" VerticalAlignment="Center" Text="!fixshipmod" Margin="5"/>
-        <TextBlock Grid.Column="1" Grid.Row ="11" VerticalAlignment="Center" Grid.ColumnSpan="2" TextWrapping="Wrap" Text="Cuts and pastes ship you are looking at while ignoring coolodnws (accessible to moderator and above)" Margin="5"/>
-        <TextBlock Grid.Column="0" Grid.Row ="12" VerticalAlignment="Center" Text="!fixshipmod &lt;shipname&gt;" Margin="5"/>
-        <TextBlock Grid.Column="1" Grid.Row ="12" VerticalAlignment="Center" Grid.ColumnSpan="2" TextWrapping="Wrap" Text="Cuts and pastes ship by given name while ignoring coolodnws (accessible to moderator and above)" Margin="5"/>
-        <TextBlock Grid.Column="0" Grid.Row ="13" VerticalAlignment="Center" Text="!fixshipmodid &lt;EntityID&gt;" Margin="5"/>
-        <TextBlock Grid.Column="1" Grid.Row ="13" VerticalAlignment="Center" Grid.ColumnSpan="2" TextWrapping="Wrap" Text="Cuts and pastes ship by given EntityID while ignoring coolodnws (accessible to moderator and above)" Margin="5"/>
+        <Button Grid.Column="2" Grid.Row="8" Content="Save Config" Margin="5" Click="SaveButton_OnClick"></Button>
+
+        <TextBlock Grid.Column="0" Grid.Row ="9" VerticalAlignment="Center" Grid.ColumnSpan="2" Text="Commands" Margin="5" FontWeight="Bold" />
+        <TextBlock Grid.Column="0" Grid.Row ="10" VerticalAlignment="Center" Text="!fixship" Margin="5" />
+        <TextBlock Grid.Column="1" Grid.Row ="10" VerticalAlignment="Center" Grid.ColumnSpan="2" TextWrapping="Wrap" Text="Cuts and pastes ship you are looking at (accessible to all)" Margin="5"/>
+        <TextBlock Grid.Column="0" Grid.Row ="11" VerticalAlignment="Center" Text="!fixship &lt;shipname&gt;" Margin="5"/>
+        <TextBlock Grid.Column="1" Grid.Row ="11" VerticalAlignment="Center" Grid.ColumnSpan="2" TextWrapping="Wrap" Text="Cuts and pastes ship you are looking at by given name (accessible to all)" Margin="5"/>
+        <TextBlock Grid.Column="0" Grid.Row ="12" VerticalAlignment="Center" Text="!fixshipmod" Margin="5"/>
+        <TextBlock Grid.Column="1" Grid.Row ="12" VerticalAlignment="Center" Grid.ColumnSpan="2" TextWrapping="Wrap" Text="Cuts and pastes ship you are looking at while ignoring coolodnws (accessible to moderator and above)" Margin="5"/>
+        <TextBlock Grid.Column="0" Grid.Row ="13" VerticalAlignment="Center" Text="!fixshipmod &lt;shipname&gt;" Margin="5"/>
+        <TextBlock Grid.Column="1" Grid.Row ="13" VerticalAlignment="Center" Grid.ColumnSpan="2" TextWrapping="Wrap" Text="Cuts and pastes ship by given name while ignoring coolodnws (accessible to moderator and above)" Margin="5"/>
+        <TextBlock Grid.Column="0" Grid.Row ="14" VerticalAlignment="Center" Text="!fixshipmodid &lt;EntityID&gt;" Margin="5"/>
+        <TextBlock Grid.Column="1" Grid.Row ="14" VerticalAlignment="Center" Grid.ColumnSpan="2" TextWrapping="Wrap" Text="Cuts and pastes ship by given EntityID while ignoring coolodnws (accessible to moderator and above)" Margin="5"/>
     </Grid>
 </UserControl>

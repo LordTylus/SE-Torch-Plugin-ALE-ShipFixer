@@ -23,7 +23,6 @@ namespace ALE_ShipFixer {
         public long CooldownConfirmationSeconds { get { return Config.ConfirmationInSeconds; } }
         public long CooldownConfirmation { get { return Config.ConfirmationInSeconds * 1000; } }
         public bool PlayerCommandEnabled { get { return Config.PlayerCommandEnabled; } }
-        public bool FactionFixEnabled { get { return Config.FixShipFactionEnabled; } }
 
         /// <inheritdoc />
         public override void Init(ITorchBase torch) {

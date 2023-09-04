@@ -9,5 +9,6 @@
         GRID_OCCUPIED,
         SHIP_FIXED,
         GRID_NOT_FOUND,
+        PLAYERS_WERE_EJECTED,
     }
 }
